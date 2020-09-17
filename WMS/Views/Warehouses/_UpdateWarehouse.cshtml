@@ -1,0 +1,41 @@
+﻿@model WMS.Models.Entities.Warehouse
+
+<div class="col-md-12">
+    <form enctype="multipart/form-data" id="frmUpdate">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-row">
+                    <input asp-for="Id" type="hidden" class="form-control" />
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-12">
+                        <label asp-for="Title" class="control-label">Warehouse Title</label>
+                        <input asp-for="Title" class="form-control" />
+                        <span asp-validation-for="Title" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Location" class="control-label"></label>
+                    <textarea asp-for="Location" id="presentAddress" class="form-control" rows="6"></textarea>
+                    <span asp-validation-for="Location" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group right-align">
+                    <br />
+                    <br />
+                    <hr />
+                    <button type="button" class="btn btn-sm btn-outline-success" style="width:150px" onclick='insertRecord("Warehouses", "EditWarehouse", "frmUpdate")'> <i class="zmdi zmdi-save"></i> Save</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" style="width:150px" onclick='closeModalCreateForm("mdlUpdateForm","UpdateForm")'><i class="zmdi zmdi-close"></i> Cancel</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script type="text/javascript">
+
+</script>

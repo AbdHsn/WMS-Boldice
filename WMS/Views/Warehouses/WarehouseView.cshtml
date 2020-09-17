@@ -1,0 +1,138 @@
+﻿@using X.PagedList.Mvc.Core;
+@using X.PagedList;
+@model IEnumerable<WMS.Models.PageModels.WarehouseVM.ListWarehouseCapasityVM>
+
+@{
+    ViewData["Title"] = "Warehouse Capacity";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid">
+
+    <div class="row">
+
+        <div class="col-12">
+            <div class="card mb-30">
+                <div class="card-body pb-0">
+
+                    @if (Model.Count() <= 0)
+                    {
+                        <div class="text-center">
+                            <span class="badge font-11 badge-soft-purple"> No warehouse design found</span>
+
+                        </div>
+                    }
+                    else
+                    {
+                        int index = 1;
+                        @foreach (var item in Model)
+                        {
+                            <h4 class="mt-2 mb-1 card-title"><u> @item.Warehouse.Title Design @index </u> </h4>
+                            for (int i = 1; i <= item.WarehouseCapacity.Row; i++)
+                            {
+                                <div class="avatar-area">
+                                    <div class="media">
+                                        @for (int j = 1; j <= item.WarehouseCapacity.Column; j++)
+                                        {
+                                            <div class="avatar-box thumb-lg align-self-center mr-2">
+                                                <span class="avatar-title bg-soft-purple rounded">
+
+                                                    @for (int k = 1; k <= item.WarehouseCapacity.ReckQuantity; k++)
+                                                    {
+                                                        <a href="#" onclick='addReck("mdlCreateForm", "CreateForm", "Warehouses","CreateReck", "?reckQuantity=@item.WarehouseCapacity.ReckQuantity&warehouseId=@item.WarehouseCapacity.WarehouseId&row=@i&column=@j")' class="badge badge-success"> <i class="zmdi zmdi-collection-plus" title="Add Reck"></i> </a>
+                                                    }
+                                                </span>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                                <br />
+                            }
+                            index++;
+                        }
+
+                        <div class="form-group pull-right">
+                            @Html.PagedListPager((IPagedList)Model, page => Url.Action("WarehouseView", new { page = page }),
+                           new X.PagedList.Mvc.Common.PagedListRenderOptionsBase
+                           {
+                               DisplayItemSliceAndTotal = true,
+                               ContainerDivClasses = new[] { "navigation", "btn btn-default" },
+                               LiElementClasses = new[] { "page-item" },
+                               PageClasses = new[] { "btn-success", "page-link" },
+                               ActiveLiElementClass = "btn-defult"
+                           })
+                        </div>
+                    }
+
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="mdlCreateForm" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-modal="false">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title mt-0 font-16" id="myLargeModalLabel">Add New Reck</h5>
+                    <button type="button" class="close" onclick='closeModalCreateForm("mdlCreateForm","CreateForm")'>
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="CreateForm">
+                        <div class="text-center">
+                            <img src="~/ProjectImage/loading.gif" alt="Loading ..." />
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="mdlUpdateForm" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-modal="false">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title mt-0 font-16" id="myLargeModalLabel">Update Warehouse</h5>
+                    <button type="button" class="close" onclick='closeModalUpdateForm("mdlUpdateForm","UpdateForm")'>
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="UpdateForm">
+                        <div class="text-center">
+                            <img src="~/ProjectImage/loading.gif" alt="Loading ..." />
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+@section Scripts{
+
+
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $('ul.pagination > li.disabled > a').addClass('page-link');
+        });
+
+        function addReck(modalId, loadDivId, controller, action, queryString) {
+            $('#' + modalId).modal({
+                backdrop: 'static',
+                keyboard: false,
+                show: true
+            });
+            $('#' + loadDivId).load("/" + controller + "/" + action + queryString);
+        }
+    </script>
+
+}
+
