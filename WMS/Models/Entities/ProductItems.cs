@@ -7,7 +7,7 @@ namespace WMS.Models.Entities
     {
         public long Id { get; set; }
         public long? ProductId { get; set; }
-        public string ProductSerial { get; set; }
+        public string ItemSerial { get; set; }
         public DateTime? CreatedDate { get; set; }
     }
 }

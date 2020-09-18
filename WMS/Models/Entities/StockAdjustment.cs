@@ -7,6 +7,7 @@ namespace WMS.Models.Entities
     {
         public long Id { get; set; }
         public string AdjustmentNo { get; set; }
+        public long? WarehouseId { get; set; }
         public long? ProductId { get; set; }
         public int? Quantity { get; set; }
         public string Note { get; set; }

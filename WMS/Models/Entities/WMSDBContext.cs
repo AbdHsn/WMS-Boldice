@@ -315,13 +315,13 @@ namespace WMS.Models.Entities
 
             modelBuilder.Entity<ProductItems>(entity =>
             {
-                entity.HasIndex(e => e.ProductSerial)
+                entity.HasIndex(e => e.ItemSerial)
                     .HasName("UQ__ProductI__CA167712CADD7D4E")
                     .IsUnique();
 
                 entity.Property(e => e.CreatedDate).HasColumnType("datetime");
 
-                entity.Property(e => e.ProductSerial).HasMaxLength(30);
+                entity.Property(e => e.ItemSerial).HasMaxLength(30);
             });
 
             modelBuilder.Entity<ProductType>(entity =>

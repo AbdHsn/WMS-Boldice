@@ -26,6 +26,7 @@ namespace WMS.CommonBusinessFunctions
 
             var createNewStockTrace = new StockTrace()
             {
+                WarehouseId = model.WarehouseId,
                 ProductId = model.ProductId,
                 OpeningQuantity = openningQty,
                 CurrentQuantity = currentQty,

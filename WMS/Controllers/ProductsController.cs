@@ -1,331 +1,584 @@
-﻿//using System;
-//using System.Collections.Generic;
-//using System.IO;
-//using System.Linq;
-//using System.Threading.Tasks;
-//using AutoMapper;
-//using CommonLogics;
-//using Microsoft.AspNetCore.Hosting;
-//using Microsoft.AspNetCore.Mvc;
-//using Microsoft.AspNetCore.Mvc.Rendering;
-//using Microsoft.EntityFrameworkCore;
-//using POSMVC.Models.Entities;
-//using POSMVC.Models.PageModels.ProductsVM;
-//using X.PagedList;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Transactions;
+using CommonLogics;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 
-//namespace POSMVC.Controllers
-//{
-//    public class ProductsController : Controller
-//    {
-//        #region Global Variables
-//        private readonly EyePosDBContext _context;
-//        private readonly IMapper _mapper;
-//        private readonly CommonFunctions _cmnFunction;
-//        private readonly IHostingEnvironment _he;
-//        #endregion
+using WMS.CommonBusinessFunctions;
+using WMS.CommonBusinessFunctions.BusinessModels;
+using WMS.Models.Entities;
+using WMS.Models.PageModels.ItemVM;
+using WMS.Models.PageModels.ProductEntry;
+using WMS.Models.PageModels.ProductVM;
+using WMS.Models.PageModels.ProductVM.ProductEntry;
+using X.PagedList;
 
-//        #region Constructor
-//        public ProductsController(
-//               EyePosDBContext context,
-//               IMapper mapper,
-//               CommonFunctions cmnFunction,
-//               IHostingEnvironment he
-//        )
-//        {
-//            _context = context;
-//            _mapper = mapper;
-//            _cmnFunction = cmnFunction;
-//            _he = he;
-//        }
-//        #endregion
+namespace POSMVC.Controllers
+{
+    public class ProductsController : Controller
+    {
 
-//        #region GetMethods
-//        // GET: Products
-//        public async Task<IActionResult> Index(int? page)
-//        {
-//            var pageNumber = page ?? 1;
-//            int pageSize = 10;
-//            //var products = _context.Products;//.ToPagedList(pageNumber, pageSize);
-//            var products = from p in _context.Products
-//                           join c in _context.Category on p.CategoryId equals c.Id
-//                           join b in _context.Brand on p.BrandId equals b.Id
-//                           join pi in _context.ProductImage on p.Id equals pi.ProductId
-//                           into productAll
-//                           from pa in productAll.DefaultIfEmpty()
-//                           select new
-//                           {
-//                               product = p,
-//                               category = c,
-//                               brand = b,
-//                               productImage = pa
-//                           };
-//            var lstProduct = new List<ListProduct>();
-//            foreach (var item in products)
-//            {
-//                var product = new ListProduct()
-//                {
-//                    Product = item.product,
-//                    ProductImage = item.productImage,
-//                    Category = item.category,
-//                    Brand = item.brand
-//                };
-//                lstProduct.Add(product);
-//            }
-//            var resultListProduct = lstProduct.ToPagedList(pageNumber, pageSize);
+        #region Global Variables
+        private readonly WMSDBContext _context;
+        private readonly CommonFunctions _cmnFunction;
+        private readonly CommonBusinessLogics _cmnBusinessFunction;
+        private readonly IHostingEnvironment _he;
+        #endregion
+
+        #region Constructor
+        public ProductsController(
+               WMSDBContext context,
+               CommonFunctions cmnFunction,
+               CommonBusinessLogics cmnBusinessFunction,
+               IHostingEnvironment he
+        )
+        {
+            _context = context;
+            _cmnFunction = cmnFunction;
+            _cmnBusinessFunction = cmnBusinessFunction;
+            _he = he;
+        }
+        #endregion
+
+        #region EntryItems GetMethods
+        public async Task<IActionResult> EntryItems(int? page, int? ddlId)
+        {
+            var pageNumber = page ?? 1;
+            int pageRowSize = 10;
+            int productType = ddlId ?? 0;
+
+            var productInsert = new List<ListProductInsertionVM>();
+
+            if (productType == 0)
+            {
+                var getProductI = from pe in _context.ProductInsertion
+                                  orderby pe.EntryDate descending
+                                  join p in _context.Products on pe.ProductId equals p.Id
+                                  join pt in _context.ProductType on p.ProductTypeId equals pt.Id
+                                  select new ListProductInsertionVM
+                                  {
+                                      ProductInsertion = pe,
+                                      Products = p,
+                                      ProductType = pt
+                                  };
+                productInsert = await getProductI.ToListAsync();
+            }
+
+            var result = productInsert.ToPagedList(pageNumber, pageRowSize);
+            return View("ProductEntry/InsertedProducts", result);
+        }
+
+        [HttpGet, ActionName("InsertProductItem")]
+        public async Task<IActionResult> InsertProductItem()
+        {
+            ViewData["Product"] = new SelectList(await _context.Products.ToListAsync(), "Id", "Name");
+            ViewData["Warehouse"] = new SelectList(await _context.Warehouse.ToListAsync(), "Id", "Title");
+
+            return PartialView("ProductEntry/_InsertProductItems", new InsertProductItemVM());
+        }
+        #endregion
+
+        #region Product GetMethods
+        public async Task<IActionResult> Products(int? page, int? ddlId)
+        {
+            var pageNumber = page ?? 1;
+            int pageRowSize = 10;
+            int productType = ddlId ?? 0;
+
+            var products = new List<ListProductVM>();
+
+            if (productType == 0)
+            {
+                var getProducts = from p in _context.Products
+                                  join pt in _context.ProductType on p.ProductTypeId equals pt.Id
+                                  join br in _context.Brand on p.BrandId equals br.Id
+                                  join mf in _context.Manufacturer on p.ManufacturerId equals mf.Id
+                                  select new ListProductVM
+                                  {
+                                      Products = p,
+                                      ProductType = pt,
+                                      Brand = br,
+                                      Manufacturer = mf
+                                  };
+                products = await getProducts.ToListAsync();
+            }
+            else
+            {
+                var getProducts = from p in _context.Products
+                                  where p.ProductTypeId == productType
+                                  join pt in _context.ProductType on p.ProductTypeId equals pt.Id
+                                  join br in _context.Brand on p.BrandId equals br.Id
+                                  join mf in _context.Manufacturer on p.ManufacturerId equals mf.Id
+                                  select new ListProductVM
+                                  {
+                                      Products = p,
+                                      ProductType = pt,
+                                      Brand = br,
+                                      Manufacturer = mf
+                                  };
+
+                products = getProducts.ToList();
+            }
+
+            ViewData["addProductType"] = new SelectList(_context.ProductType, "Id", "TypeName");
+            ViewData["addManufacturer"] = new SelectList(_context.Manufacturer, "Id", "ManufacturerName");
+            ViewData["addBrand"] = new SelectList(_context.Brand, "Id", "Name");
+
+            ViewData["ProductType"] = new SelectList(_context.ProductType, "Id", "TypeName", productType);
+            ViewData["SelectedProductTypeName"] = productType == 0 ? "All" : _context.ProductType.Find(productType).TypeName;
+
+            var result = products.ToPagedList(pageNumber, pageRowSize);
+            return View(result);
+        }
+
+        [HttpGet, ActionName("CreateProductModel")]
+        public async Task<IActionResult> CreateProductModel()
+        {
+            ViewData["ProductType"] = new SelectList(await _context.ProductType.ToListAsync(), "Id", "TypeName");
+            ViewData["Brand"] = new SelectList(await _context.Brand.ToListAsync(), "Id", "Name");
+            ViewData["Manufacturer"] = new SelectList(await _context.Manufacturer.ToListAsync(), "Id", "ManufacturerName");
+            return PartialView("_CreateProductModel", new Products());
+        }
+
+        [HttpGet, ActionName("EditProductModel")]
+        public async Task<IActionResult> Edit(long? id)
+        {
+            if (id != 0)
+            {
+                var product = await _context.Products.Where(p => p.Id == id).FirstOrDefaultAsync();
+                if (product != null)
+                {
+                    ViewData["ProductType"] = new SelectList(await _context.ProductType.ToListAsync(), "Id", "TypeName", product.ProductTypeId);
+                    ViewData["Brand"] = new SelectList(await _context.Brand.ToListAsync(), "Id", "Name", product.BrandId);
+                    ViewData["Manufacturer"] = new SelectList(await _context.Manufacturer.ToListAsync(), "Id", "ManufacturerName", product.ManufacturerId);
+
+                    return PartialView("_UpdateProduct", product);
+                }
+                else
+                    return PartialView("_UpdateProduct", new Products());
+            }
+            else
+            {
+                ViewData["UserTypeId"] = new SelectList(_context.UserType, "Id", "TypeName");
+                return PartialView("_UpdateProduct", new Products());
+            }
+        }
+        #endregion
+
+        //#region PurchaseItems PostMethods
+
+        [HttpPost, ActionName("InsertProductItem")]
+        public async Task<JsonResult> InsertProductItem(InsertProductItemVM model)
+        {
+            var result = (dynamic)null;
+            try
+            {
+                if (ModelState.IsValid)
+                {
+                    //Available Space check
+                    var isSpaceAvailable = await _context.ItemSpace.Where(w => w.WarehouseId == model.WarehouseId && w.IsAllocated == false).ToListAsync();
+                    if (isSpaceAvailable == null || isSpaceAvailable.Count() < model.ProductInsertion.Quantity)
+                    {
+                        var getWarehouseTitle = _context.Warehouse.Where(w => w.Id == model.WarehouseId);
+                        return result = Json(new { success = false, message = "No space available under " + getWarehouseTitle.FirstOrDefault().Title + " for the quantity of " + model.ProductInsertion.Quantity.ToString(), redirectUrl = @"/Products/EntryItems" });
+                    }
+
+                    TransactionOptions options = new TransactionOptions();
+                    options.IsolationLevel = IsolationLevel.Serializable;
+                    options.Timeout = new TimeSpan(0, 10, 0);
+                    using (TransactionScope transaction = new TransactionScope(TransactionScopeOption.Required, options))
+                    {
+                        //Entry No Generate
+                        var getLastEntryNo = _context.ProductInsertion.OrderByDescending(pu => pu.EntryDate).FirstOrDefault();
+                        if (getLastEntryNo != null)
+                        {
+                            int creatEntryNo = Convert.ToInt32(getLastEntryNo.EntryNo.Substring(10)) + 1;
+                            model.ProductInsertion.EntryNo = _cmnBusinessFunction.GenerateNumberWithPrefix("ENT-", creatEntryNo.ToString());
+                        }
+                        else
+                        {
+                            model.ProductInsertion.EntryNo = _cmnBusinessFunction.GenerateNumberWithPrefix("ENT-", 1.ToString());
+                        }
+
+                        //Product Item Insertion
+                        model.ProductInsertion.EntryDate = DateTime.UtcNow;
+                        _context.ProductInsertion.Add(model.ProductInsertion);
+                        _context.SaveChanges();
+
+                        for (int i = 0; i < model.ProductInsertion.Quantity; i++)
+                        {
+                            //Serial No Generate
+                            var getLastSerialOfModel = _context.ProductItems.Where(p => p.ProductId == model.ProductInsertion.ProductId).OrderByDescending(pi => pi.CreatedDate).FirstOrDefault();
+                            int lastSerial = 0;
+                            if (getLastSerialOfModel != null)
+                            {
+                                lastSerial = Convert.ToInt32(getLastSerialOfModel.ItemSerial.Substring(13));
+                            }
+
+                            //Product Item Insertion
+                            var newProductItem = new ProductItems()
+                            {
+                                ProductId = model.ProductInsertion.ProductId,
+                                ItemSerial = model.ProductInsertion.ProductId.ToString().PadLeft(6, '0') + " " + DateTime.Now.ToString("yy") + DateTime.Now.Month.ToString("00") + DateTime.Now.Day.ToString("00") + (lastSerial + 1).ToString().PadLeft(10, '0'),
+                                CreatedDate = DateTime.UtcNow
+                            };
+                            _context.ProductItems.Add(newProductItem);
+                            _context.SaveChanges();
+
+                            //Update ItemSpace
+                            isSpaceAvailable[i].ProductItemId = newProductItem.Id;
+                            isSpaceAvailable[i].IsAllocated = true;
+                            isSpaceAvailable[i].LastUpdate = DateTime.UtcNow;
+                            isSpaceAvailable[i].ActionedBy = 0;
+                            _context.ItemSpace.Update(isSpaceAvailable[i]);
+                            _context.SaveChanges();
+                        }
+
+                        //Stock Generate only once after loop
+                        var isStockExist = _context.Stock.Where(s => s.ProductId == model.ProductInsertion.ProductId && s.WarehouseId == model.WarehouseId).FirstOrDefault();
+                        if (isStockExist != null)
+                        {
+                            isStockExist.LastQuantity = isStockExist.AvailableQuantity;
+                            isStockExist.AvailableQuantity += model.ProductInsertion.Quantity;
+                            isStockExist.LastUpdate = DateTime.UtcNow;
+
+                            _context.Stock.Update(isStockExist);
+                            _context.SaveChanges();
+
+                            _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                            {
+                                NewQuantity = Convert.ToInt32(model.ProductInsertion.Quantity),
+                                ProductId = Convert.ToInt64(model.ProductInsertion.ProductId),
+                                WarehouseId = Convert.ToInt64(model.WarehouseId),
+                                ReferenecId = model.ProductInsertion.EntryNo,
+                                TableReference = "ProductInsertion",
+                                Note = "Generated From Products/InsertProductItem"
+                            });
+                        }
+                        else
+                        {
+                            var newStock = new Stock()
+                            {
+                                WarehouseId = model.WarehouseId,
+                                ProductId = model.ProductInsertion.ProductId,
+                                AvailableQuantity = model.ProductInsertion.Quantity,
+                                LastQuantity = 0,
+                                CreatedDate = DateTime.UtcNow
+                            };
+                            _context.Stock.Add(newStock);
+                            _context.SaveChanges();
+
+                            _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                            {
+                                NewQuantity = Convert.ToInt32(model.ProductInsertion.Quantity),
+                                WarehouseId = Convert.ToInt64(model.WarehouseId),
+                                ProductId = Convert.ToInt64(model.ProductInsertion.ProductId),
+                                ReferenecId = model.ProductInsertion.EntryNo,
+                                TableReference = "ProductInsertion",
+                                Note = "Generated From Products/InsertProductItem"
+                            });
+                        }
+
+                        transaction.Complete();
+                        return result = Json(new { success = true, message = model.ProductInsertion.EntryNo + " successfully inserted.", redirectUrl = @"/Products/EntryItems" });
+                    }
+                }
+                else
+                    return result = Json(new { success = false, message = "Data is not valid.", redirectUrl = "" });
+
+            }
+            catch (Exception ex)
+            {
+                string err = @"Exception occured at Products/InsertProductItem: " + ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
+        //// [HttpPost, ActionName("ImportFromExcel")]
+        ////public async Task<JsonResult> ImportFromExcel( IFormFile file)
+        ////{
+        ////    var result = (dynamic)null;
+        ////    try
+        ////    {
+        ////        if (ModelState.IsValid)
+        ////        {
+        ////            await Task.Run(() => {
+
+        ////            });
+        ////        }
+        ////        else
+        ////            return result = Json(new { success = false, message = "Data is not valid.", redirectUrl = "" });
+
+        ////    }
+        ////    catch (Exception ex)
+        ////    {
+        ////        string err = @"Exception occured at Users/Create: " + ex.ToString();
+        ////        return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+        ////    }
+        ////}
+        //#endregion
+
+        //#region Items PostMethods
+
+        [HttpPost, ActionName("CreateProductModel")]
+        public async Task<JsonResult> Create(Products model)
+        {
+            var result = (dynamic)null;
+            try
+            {
+                if (ModelState.IsValid)
+                {
+                    model.CreatedDate = System.DateTime.UtcNow;
+                    model.IsActive = true;
+                    _context.Products.Add(model);
+                    await _context.SaveChangesAsync();
+
+                    ////Image insertion Code
+                    //if (user.Users.Id > 0)
+                    //{
+                    //    if (user.file != null)
+                    //    {
+                    //        string extension = Path.GetExtension(user.file.FileName);
+                    //        string smallImage = "StaticFiles/Users/SmallImage/";
+                    //        string bigImage = "StaticFiles/Users/BigImage/";
+
+                    //        if (_cmnFunction.SaveImage(user.file, user.Users.Id.ToString(), Path.Combine(_he.WebRootPath, smallImage), extension, 60, 60))
+                    //        {
+                    //            user.Users.SmallImage = smallImage + user.Users.Id.ToString() + extension;
+                    //        }
+
+                    //        if (_cmnFunction.SaveImage(user.file, user.Users.Id.ToString(), Path.Combine(_he.WebRootPath, bigImage), extension))
+                    //        {
+                    //            user.Users.BigImage = bigImage + user.Users.Id.ToString() + extension;
+                    //        }
+
+                    //        _context.Entry(user.Users).State = EntityState.Modified;
+                    //        await _context.SaveChangesAsync();
+                    //    }
+                    //}
+                    ////Image insertion Code
+                    ///
+                    return result = Json(new { success = true, message = model.ProductCode + " successfully created.", redirectUrl = @"/Products/Products" });
+                }
+                else
+                    return result = Json(new { success = false, message = "Data is not valid.", redirectUrl = "" });
+
+            }
+            catch (Exception ex)
+            {
+                string err = @"Exception occured at Items/CreateSingleItem: " + ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
+        [HttpPost, ActionName("EditProductModel")]
+        public async Task<JsonResult> Edit(Products model)
+        {
+            var result = (dynamic)null;
+
+            try
+            {
+                if (model.Id <= 0)
+                {
+                    return result = Json(new { success = false, message = " Record is not found", redirectUrl = @"/Products/Products" });
+                }
+
+                var product = await _context.Products.Where(pd => pd.Id == model.Id).FirstOrDefaultAsync();
+                product.ProductTypeId = model.ProductTypeId;
+                product.ProductCode = model.ProductCode;
+                product.Name = model.Name;
+                product.BrandId = model.BrandId;
+                product.ManufacturerId = model.ManufacturerId;
+                product.SellingPrice = model.SellingPrice;
+                product.CostPrice = model.CostPrice;
+                product.UpdateDate = DateTime.UtcNow;
+
+                _context.Products.Update(product);
+                await _context.SaveChangesAsync();
+
+                return result = Json(new { success = true, message = "Record successfully updated", redirectUrl = @"/Products/Products" });
+            }
+            catch (Exception ex)
+            {
+                string err = @"Exception occured at Products/EditProductModel " + ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
 
 
-//            await Task.Run(() =>
-//            {
-//            });
-//            return View(resultListProduct);
-//            //  var eyePosDBContext = _context.Products.Include(p => p.Brand).Include(p => p.Category);
-//            //  return View(await eyePosDBContext.ToListAsync());
+        [HttpPost, ActionName("DeleteProductModel")]
+        public async Task<JsonResult> Delete(Products model)
+        {
+            var result = (dynamic)null;
+            try
+            {
+                var product = await _context.Products.Where(c => c.Id == model.Id).FirstOrDefaultAsync();
 
-//        }
+                if (product != null)
+                {
+                    _context.Products.Remove(product);
+                    await _context.SaveChangesAsync();
 
-//        // GET: Products/Create
-//        public IActionResult Create()
-//        {
-//            ViewData["BrandId"] = new SelectList(_context.Brand, "Id", "Name");
-//            ViewData["CategoryId"] = new SelectList(_context.Category.Where(c => c.SubCategory == null), "Id", "ParentCategory");
-//            return View();
-//        }
-
-//        // GET: Products/Edit/5
-//        public async Task<IActionResult> Edit(long? id)
-//        {
-//            if (id == null)
-//            {
-//                return NotFound();
-//            }
-
-//            var product = await _context.Products.FindAsync(id);
-//            var productImage = _context.ProductImage.Where(pi => pi.ProductId == id).FirstOrDefault();
-//            var updateProductDetails = new UpdateProduct()
-//            {
-//                Products = product,
-//                ProductImage = productImage
-//            };
-//            if (updateProductDetails == null)
-//            {
-//                return NotFound();
-//            }
-
-//            ViewData["BrandId"] = new SelectList(_context.Brand, "Id", "Name", updateProductDetails.Products.BrandId);
-//            ViewData["CategoryId"] = new SelectList(_context.Category.Where(c => c.SubCategory == null), "Id", "ParentCategory", updateProductDetails.Products.CategoryId);
-//            return View(updateProductDetails);
-//        }
-
-//        #endregion
-
-//        #region PostMethods
-//        [HttpPost]
-//        [ValidateAntiForgeryToken]
-//        public async Task<IActionResult> Create([Bind("Id,ProductCode,Name,CategoryId,BrandId,Description,CostPrice,SellingPrice,MinSellingPrice,MemberPrice,WholesalePrice,IsActive,MetaTags,ProductImage")] CreateProduct product)
-//        {
-//            try
-//            {
-//                if (ModelState.IsValid)
-//                {
-
-//                    var newProduct = _mapper.Map<Products>(product);
-//                    _context.Products.Add(newProduct);
-//                    await _context.SaveChangesAsync();
-//                    if (newProduct.Id > 0)
-//                    {
-//                        var newProductImage = new ProductImage()
-//                        {
-//                            Title = product.ProductImage.FileName,
-//                            ProductId = newProduct.Id
-//                        };
-//                        _context.ProductImage.Add(newProductImage);
-//                        _context.SaveChanges();
-
-//                        string extension = Path.GetExtension(product.ProductImage.FileName);
-//                        string smallImage = "StaticFiles/ProductImage/SmallImage/";
-//                        string bigImage = "StaticFiles/ProductImage/BigImage/";
-
-//                        if (_cmnFunction.SaveImage(product.ProductImage, newProductImage.Id.ToString(), Path.Combine(_he.WebRootPath, smallImage), extension, 60, 60))
-//                        {
-//                            newProductImage.SmallImage = smallImage + newProductImage.Id.ToString() + extension;
-//                        }
-
-//                        if (_cmnFunction.SaveImage(product.ProductImage, newProductImage.Id.ToString(), Path.Combine(_he.WebRootPath, bigImage), extension))
-//                        {
-//                            newProductImage.BigImage = bigImage + newProductImage.Id.ToString() + extension;
-//                        }
-//                        _context.Entry(newProductImage).State = EntityState.Modified;
-//                        await _context.SaveChangesAsync();
-//                        return RedirectToAction(nameof(Index));
-//                    }
-//                }
-//            }
-//            catch (Exception ex)
-//            {
-//                string error = ex.ToString();
-//            }
-
-//            return View(product);
-//        }
-
-//        [HttpPost]
-//        // [ValidateAntiForgeryToken]
-//        public async Task<IActionResult> Edit(UpdateProduct updateProduct)
-//        {
-//            if (updateProduct.Products.Id <= 0)
-//            {
-//                return NotFound();
-//            }
-//            try
-//            {
-//                _context.Products.Update(updateProduct.Products);
-//                await _context.SaveChangesAsync();
+                    return result = Json(new { success = true, message = " Record successfully deleted.", redirectUrl = @"/Products/Products" });
+                }
+                else
+                    return result = Json(new { success = false, message = " Record is not found.", redirectUrl = "" });
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
 
 
-//                string smallImage = "StaticFiles/ProductImage/SmallImage/";
-//                string bigImage = "StaticFiles/ProductImage/BigImage/";
+        //[HttpPost, ActionName("ImportFromExcel")]
+        ////public async Task<JsonResult> ImportFromExcel( IFormFile file)
+        ////{
+        ////    var result = (dynamic)null;
+        ////    try
+        ////    {
+        ////        if (ModelState.IsValid)
+        ////        {
+        ////            await Task.Run(() => {
 
-//                var existProductImage = _context.ProductImage.Where(pi => pi.ProductId == updateProduct.Products.Id).FirstOrDefault();
+        ////            });
+        ////        }
+        ////        else
+        ////            return result = Json(new { success = false, message = "Data is not valid.", redirectUrl = "" });
 
-//                if (existProductImage == null)
-//                {
-//                    //new proudct image creation.
-//                    var newProductImage = new ProductImage()
-//                    {
-//                        Title = updateProduct.ProductActualImage.FileName,
-//                        ProductId = updateProduct.Products.Id
-//                    };
-//                    _context.ProductImage.Add(newProductImage);
-//                    _context.SaveChanges();
+        ////    }
+        ////    catch (Exception ex)
+        ////    {
+        ////        string err = @"Exception occured at Users/Create: " + ex.ToString();
+        ////        return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+        ////    }
+        ////}
+        //#endregion
 
-//                    string extension = Path.GetExtension(updateProduct.ProductActualImage.FileName);
+        //#region RemoteValidation
+        //[AcceptVerbs("Get", "Post")]
+        //[AllowAnonymous]
+        //public JsonResult IsEmailExist(CreateUserVM user)
+        //{
+        //    var email = _context.Users.Where(u => u.Email == user.Users.Email).SingleOrDefault();
+        //    if (email == null)
+        //    {
+        //        return Json(true);
+        //    }
+        //    else
+        //    {
+        //        return Json($"\"{user.Users.Email}\" is already used.");
+        //    }
+        //}
+        //#endregion RemoteValidation
 
-//                    if (_cmnFunction.SaveImage(updateProduct.ProductActualImage, newProductImage.Id.ToString(), Path.Combine(_he.WebRootPath, smallImage), extension, 60, 60))
-//                    {
-//                        newProductImage.SmallImage = smallImage + newProductImage.Id.ToString() + extension;
-//                    }
+        //#region PurchaseItem Search Methods
+        //[Produces("application/json")]
+        //[HttpGet, ActionName("ItemPurchaseSearch")]
+        //public async Task<IActionResult> ItemPurchaseSearch()
+        //{
+        //    try
+        //    {
+        //        string term = HttpContext.Request.Query["term"].ToString();
+        //        var result = await _context.Purchase.Where(p => p.PurchaseNo.Contains(term)).Select(p => p.PurchaseNo).ToListAsync();
+        //        return Ok(result);
+        //    }
+        //    catch
+        //    {
+        //        return BadRequest();
+        //    }
+        //}
 
-//                    if (_cmnFunction.SaveImage(updateProduct.ProductActualImage, newProductImage.Id.ToString(), Path.Combine(_he.WebRootPath, bigImage), extension))
-//                    {
-//                        newProductImage.BigImage = bigImage + newProductImage.Id.ToString() + extension;
-//                    }
-//                    _context.Entry(newProductImage).State = EntityState.Modified;
-//                    await _context.SaveChangesAsync();
-//                }
 
-//                if (updateProduct.ProductImage.Id > 0)
-//                {
-//                    //if true, than product image already exist.
-//                    if (updateProduct.ProductActualImage != null)
-//                    {
-//                        //Delete previous physical image and update image name with previous ProductImage Id with extension
-//                        _cmnFunction.DeleteStaticFile(Path.Combine(_he.WebRootPath, existProductImage.BigImage));
-//                        _cmnFunction.DeleteStaticFile(Path.Combine(_he.WebRootPath, existProductImage.SmallImage));
+        //[HttpGet, ActionName("SearchPurchaseResult")]
+        //public async Task<IActionResult> SearchPurchaseResult(string purchaseNo)
+        //{
+        //    var pageNumber = 1;
+        //    int pageRowSize = 10;
 
-//                        string extension = Path.GetExtension(updateProduct.ProductActualImage.FileName);
 
-//                        //Updating/Replacing product images after deleting old images
-//                        if (_cmnFunction.SaveImage(updateProduct.ProductActualImage, existProductImage.Id.ToString(), Path.Combine(_he.WebRootPath, smallImage), extension, 60, 60))
-//                        {
-//                            existProductImage.SmallImage = smallImage + existProductImage.Id.ToString() + extension;
-//                        }
+        //    var purchaseItem = new List<ListPurchaseVM>();
 
-//                        if (_cmnFunction.SaveImage(updateProduct.ProductActualImage, existProductImage.Id.ToString(), Path.Combine(_he.WebRootPath, bigImage), extension))
-//                        {
-//                            existProductImage.BigImage = bigImage + existProductImage.Id.ToString() + extension;
+        //    var getPurchase = from pu in _context.Purchase
+        //                      where pu.PurchaseNo == purchaseNo
+        //                      orderby pu.EntryDate descending
+        //                      join p in _context.Products on pu.ProductId equals p.Id
+        //                      join pt in _context.ProductType on p.ProductTypeId equals pt.Id
+        //                      join mf in _context.Manufacturer on p.ManufacturerId equals mf.Id
+        //                      join br in _context.Brand on p.BrandId equals br.Id
+        //                      select new ListPurchaseVM
+        //                      {
+        //                          Purchase = pu,
+        //                          Products = p,
+        //                          ProductType = pt,
+        //                          Brand = br,
+        //                          Manufacturer = mf
+        //                      };
+        //    purchaseItem = await getPurchase.ToListAsync();
 
-//                        }
-//                        _context.Entry(existProductImage).State = EntityState.Modified;
-//                        await _context.SaveChangesAsync();
+        //    ViewBag.SearchValue = purchaseNo;
+        //    var result = purchaseItem.ToPagedList(pageNumber, pageRowSize);
 
-//                    }
-//                    if (updateProduct.ProductActualImage == null && updateProduct.ImageClearActive == true)
-//                    {
-//                        //Delete previous physical image and update image name with previous ProductImage Id with extension
-//                        _cmnFunction.DeleteStaticFile(Path.Combine(_he.WebRootPath, existProductImage.BigImage));
-//                        _cmnFunction.DeleteStaticFile(Path.Combine(_he.WebRootPath, existProductImage.SmallImage));
+        //    return View("PurchaseItems/SearchPurchaseItem", result);
+        //}
+        //#endregion
 
-//                        //Delete productimage record also.
-//                       // _context.ProductImage.Remove(existProductImage);
-//                        await _context.SaveChangesAsync();
-//                    }
-//                }
-//            }
-//            catch (DbUpdateConcurrencyException ex)
-//            {
+        //#region Item Search Methods
+        //[Produces("application/json")]
+        //[HttpGet, ActionName("ItemSearch")]
+        //public async Task<IActionResult> Search()
+        //{
+        //    try
+        //    {
+        //        string term = HttpContext.Request.Query["term"].ToString();
+        //        var result = await _context.Products.Where(p => p.ProductCode.Contains(term)).Select(p => p.ProductCode).ToListAsync();
+        //        return Ok(result);
+        //    }
+        //    catch
+        //    {
+        //        return BadRequest();
+        //    }
+        //}
 
-//            }
-//            return RedirectToAction(nameof(Index));
 
-//        }
+        //[HttpGet, ActionName("SearchResult")]
+        //public async Task<IActionResult> SearchResult(string productCode)
+        //{
+        //    var pageNumber = 1;
+        //    int pageRowSize = 10;
+        //    int productType = 0;
 
-//        // POST: Products/Delete/5
-//        [HttpPost, ActionName("Delete")]
-//        //  [ValidateAntiForgeryToken]
-//        public async Task<JsonResult> DeleteProduct(Products model)
-//        {
-//            var result = (dynamic)null;
-//            try
-//            {
-//                //Get Product Image record from database
-//                var productImage = await _context.ProductImage.Where(pi => pi.ProductId == model.Id).FirstOrDefaultAsync();
-//                if (productImage != null)
-//                {
-//                    //Delete  physical image file
-//                    _cmnFunction.DeleteStaticFile(Path.Combine(_he.WebRootPath, productImage.BigImage));
-//                    _cmnFunction.DeleteStaticFile(Path.Combine(_he.WebRootPath, productImage.SmallImage));
-                    
-//                    //Delete productimage record from database.
-//                    _context.ProductImage.Remove(productImage);
-//                    await _context.SaveChangesAsync();
-//                }
+        //    var products = new List<ListProductVM>();
+        //    var getProducts = from p in _context.Products
+        //                      where p.ProductCode == productCode
+        //                      join pt in _context.ProductType on p.ProductTypeId equals pt.Id
+        //                      join br in _context.Brand on p.BrandId equals br.Id
+        //                      join mf in _context.Manufacturer on p.ManufacturerId equals mf.Id
+        //                      select new ListProductVM
+        //                      {
+        //                          Products = p,
+        //                          ProductType = pt,
+        //                          Brand = br,
+        //                          Manufacturer = mf
+        //                      };
+        //    products = await getProducts.ToListAsync();
 
-//                //Delete Product from database
-//                var products = await _context.Products.FindAsync(model.Id);
-//                _context.Products.Remove(products);
-//                await _context.SaveChangesAsync();
+        //    ViewData["ProductType"] = new SelectList(_context.ProductType, "Id", "TypeName", productType);
+        //    ViewData["SelectedProductTypeName"] = productType == 0 ? "All" : _context.ProductType.Find(productType).TypeName;
+        //    ViewBag.SearchValue = productCode;
+        //    var result = products.ToPagedList(pageNumber, pageRowSize);
+        //    return View("SearchItem", result);
+        //}
+        //#endregion
 
-//                result = Json(new { success = true, message = " successfully deleted", redirectUrl = "/Products" });
-//            }
-//            catch (Exception ex)
-//            {
-//                string error = ex.ToString();
-//                result = Json(new { success = false, message = "Operation failed!", redirectUrl = "/Products" });
-//            }
-//            return result;
-//        }
-
-//        // DeleteImage
-//        [HttpPost, ActionName("DeleteProductImage")]
-//      //  [ValidateAntiForgeryToken]
-//        public async Task<JsonResult> DeleteProductImage(Products model)
-//        {
-//            var result = (dynamic)null;
-//            try
-//            {
-//                //Get Product Image record from database
-//             //   var productImage = await _context.ProductImage.Where(pi => pi.ProductId == model.Id).FirstOrDefaultAsync();
-//                if (productImage != null)
-//                {
-//                    //Delete  physical image file
-//                    _cmnFunction.DeleteStaticFile(Path.Combine(_he.WebRootPath, productImage.BigImage));
-//                    _cmnFunction.DeleteStaticFile(Path.Combine(_he.WebRootPath, productImage.SmallImage));
-
-//                    //Delete productimage record from database.
-//                 //   _context.ProductImage.Remove(productImage);
-//                    await _context.SaveChangesAsync();
-//                    result = Json(new { success = true, message = "Product Image successfully removed.", redirectUrl = @"/Products/Edit/" + model.Id });
-//                }
-//                else
-//                    result = Json(new { success = false, message = "No product image available to delete", redirectUrl = @"/Products/Edit/" + model.Id });
-//            }
-//            catch (Exception ex)
-//            {
-//                string error = ex.ToString();
-//                result = Json(new { success = false, message = "Failed to remove product image.", redirectUrl = "" });
-//            }
-//            return result;
-//        }
-//        #endregion
-//    }
-//}
+    }
+}
