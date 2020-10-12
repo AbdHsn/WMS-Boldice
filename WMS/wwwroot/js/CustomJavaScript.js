@@ -25,6 +25,14 @@ function openModalUpdateForm(modalId, loadDivId, controller, action, queryString
     });
     $('#' + loadDivId).load("/" + controller + "/" + action + queryString);
 }
+function openModalWithQueryString(modalId, loadDivId, controller, action, queryString) {
+    $('#' + modalId).modal({
+        backdrop: 'static',
+        keyboard: false,
+        show: true
+    });
+    $('#' + loadDivId).load("/" + controller + "/" + action +"?"+ queryString);
+}
 function closeModalUpdateForm(modalId, loadDivId) {
     $('#' + modalId).modal('hide');
     $('#' + loadDivId).empty(); 
@@ -329,8 +337,60 @@ function deleteConfirmation(modelObject, itemName, controller, action) {
         });
 }
 
+function processConfirmation(modelObject, message, controller, action) {
+    swal({
+        title: message,
+        type: "warning",
+        showCancelButton: true,
+        confirmButtonClass: "btn-sm btn-outline-danger",
+        confirmButtonText: "Delete Confirm",
+        cancelButtonClass: "btn-sm btn-fill-default",
+        cancelButtonText: "Cancel",
+        closeOnConfirm: false,
+        closeOnCancel: false
+    },
+        function (isConfirm) {
+            if (isConfirm) {
+
+                $.ajax({
+                    type: 'POST',
+                    data: { model: modelObject },
+                    dataType: 'json',
+                    cache: false,
+                    url: '/' + controller + '/' + action,
+                    success:
+                        function (data) {
+                            if (data.success === true) {
+                                if (data.redirectUrl.length)
+                                    window.location.href = data.redirectUrl;
+                            }
+                            if (data.success === false) {
+                                swal("Failed to proceed!", data.message, "error");
+                            }
+                        },
+                    error: function (data) {
+                    },
+                    complete: function (data) {
+                    }
+                });
+            } else {
+                swal.close();
+            }
+        });
+}
+
 function showMessage(title, message, messageType) {
     //MessageTypes: success, warning, info, error
     swal(title, message, messageType);
 }
 //~Database operation functions
+
+
+//Blank Check
+
+function isEmpty(stringValue) {
+    return (!stringValue || 0 === stringValue.length);
+}
+function isBlank(stringValue) {
+    return (!stringValue || /^\s*$/.test(stringValue));
+}

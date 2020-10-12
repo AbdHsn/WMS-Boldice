@@ -7,7 +7,7 @@ namespace WMS.CommonBusinessFunctions.BusinessModels
 {
     public class CreateStockTraceBM
     {
-        public long WarehouseId { get; set; }
+        public int WarehouseId { get; set; }
         public long ProductId { get; set; }
         public int NewQuantity { get; set; }
         public string ReferenecId { get; set; }

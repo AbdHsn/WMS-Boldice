@@ -6,7 +6,7 @@ namespace WMS.Models.Entities
     public partial class ItemSpace
     {
         public long Id { get; set; }
-        public long? WarehouseId { get; set; }
+        public int? WarehouseId { get; set; }
         public long? ReckId { get; set; }
         public int? ReckLevel { get; set; }
         public long? ProductItemId { get; set; }

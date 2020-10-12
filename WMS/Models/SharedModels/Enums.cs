@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -21,14 +22,21 @@ using System.Threading.Tasks;
 
 namespace WMS.Models.SharedModels
 {
-    public class DefaultValues
+    public class StaticValues
     {
         public enum OrderStatus
         {
-            InProcess = 1,
-            Collected,
-            Uncollected,
-            Refunded
+            Submitted = 1,
+            Cancelled,
+            Deleted,
+            [Display(Name = "Full Dispatch")]
+            FullDispatch,
+            [Display(Name = "Partial Dispatch")]
+            PartialDispatch,
+            [Display(Name = "Full Return")]
+            FullReturn,
+            [Display(Name = "Partial Return")]
+            PartialReturn
         }
     }
 }

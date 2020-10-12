@@ -6,7 +6,7 @@ namespace WMS.Models.Entities
     public partial class Reck
     {
         public long Id { get; set; }
-        public long? WarehouseId { get; set; }
+        public int? WarehouseId { get; set; }
         public string ReckName { get; set; }
         public int? SetupRow { get; set; }
         public int? SetupColumn { get; set; }

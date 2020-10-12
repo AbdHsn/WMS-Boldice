@@ -6,7 +6,7 @@ namespace WMS.Models.Entities
     public partial class StockTrace
     {
         public long Id { get; set; }
-        public long? WarehouseId { get; set; }
+        public int? WarehouseId { get; set; }
         public long? ProductId { get; set; }
         public int? CurrentQuantity { get; set; }
         public int? OpeningQuantity { get; set; }

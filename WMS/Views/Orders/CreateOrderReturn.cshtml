@@ -1,0 +1,116 @@
+﻿@using X.PagedList.Mvc.Core;
+@using X.PagedList;
+@model WMS.Models.PageModels.OrdersVM.CreateOrderReturnVM
+
+
+@{
+    ViewData["Title"] = "Create Return Order";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+}
+
+<div class="container-fluid">
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-30">
+                <div class="card-body pb-0">
+                    <div class="justify-content-between align-items-center mb-20">
+                        <h6 class="card-title mb-2">Order Return Items</h6>
+                    </div>
+
+                    @if (Model == null)
+                    {
+
+                            <div class="text-center">
+                                <span class="badge font-11 badge-soft-purple"> There is no record found to return.</span>
+
+                            </div>
+                    }
+                    else
+                    {
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="font-weight-bold">@Model.Orders.OrderNo</div>
+                            </div>
+                        </div>
+
+                        <form id="frmCreateForm">
+                            <input type="hidden" name="Orders.Id" value="@Model.Orders.Id" />
+                            <div class="table-responsive table-hover">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th id="checkAll" class="cursor-pointer">Check All</th>
+                                            <th>Product Details</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in Model.ProductItemDetails)
+                                        {
+                                            <tr>
+                                                <td width="10%" class="text-center">
+                                                    <div class="checkbox d-inline">
+                                                        <input type="checkbox" class="@(item.IsAlreadyReturned == true ? "" : "productCheck")" @(item.IsAlreadyReturned == true ? "disabled checked" : "")  name="ProductItemDetails[@Model.ProductItemDetails.IndexOf(item)].IsReturnable" id="chk@(Model.ProductItemDetails.IndexOf(item)+1)" value="true">
+                                                        <label for="chk@(Model.ProductItemDetails.IndexOf(item)+1)" class="cr"></label>
+                                                    </div>
+                                                    <input type="hidden" name="ProductItemDetails[@Model.ProductItemDetails.IndexOf(item)].ProductItems.Id" value="@item.ProductItems.Id" />
+                                                </td>
+                                                <td>
+                                                    <span class="font-12">Product Serial: @item.ProductItems.ItemSerial</span>
+                                                    <span class="font-12">Product Model: @item.Products.Name</span>
+                                                </td>
+                                                <td>
+                                                    @if (item.IsAlreadyReturned)
+                                                    {
+                                                        <span class="badge font-11 badge-soft-warning">Already Returned</span>
+                                                    }
+                                                    else { 
+                                                        <span class="badge font-11 badge-soft-purple">Returnable</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group right-align">
+                                        <br />
+                                        <br />
+                                        <hr />
+                                        <button type="button" class="btn btn-sm btn-outline-success" style="width:250px" onclick='insertRecord("Orders", "CreateOrderReturn", "frmCreateForm")'> <i class="zmdi zmdi-truck"></i> Order Return Confirm</button>
+                                        <a class="btn btn-sm btn-outline-danger" asp-action="OrderReturn" asp-controller="Orders" style="width:150px" onclick='closeModalCreateForm("mdlCreateForm","CreateForm")'><i class="zmdi zmdi-close"></i> Cancel</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                  
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+@section Scripts{
+
+
+
+    <script type="text/javascript">
+        var clicked = false;
+        $("#checkAll").on("click", function () {
+            $(".productCheck").prop("checked", !clicked);
+            clicked = !clicked;
+            this.innerHTML = clicked ? 'Uncheck All' : 'Check All';
+        });
+    </script>
+
+}
+

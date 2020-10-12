@@ -37,14 +37,21 @@ namespace WMS.Controllers
         {
             return PartialView("_CreateWarehouse", new Warehouse());
         }
+        
+        [HttpGet, ActionName("CreateWarehouseCapacity")]
+        public async Task<IActionResult> CreateWarehouseCapasity()
+        {
+            ViewData["Warehouse"] = new SelectList(await _context.Warehouse.ToListAsync(), "Id", "Title");
+            return PartialView("WarehouseCapacity/_CreateWarehouseCapacity", new WarehouseCapacityDefination());
+        }
 
         [HttpGet, ActionName("EditWarehouse")]
-        public async Task<IActionResult> Edit(long? id)
+        public async Task<IActionResult> Edit(int? id)
         {
             if (id != 0)
             {
-                var warehouse = await _context.Warehouse.FindAsync(id);
-                return PartialView("_UpdateWarehouse", warehouse);
+                    var warehouse = await _context.Warehouse.FindAsync(id);
+                    return PartialView("_UpdateWarehouse", warehouse);
             }
             else
             {
@@ -64,7 +71,7 @@ namespace WMS.Controllers
             lstWarehouseCapasity = await warehouseCapasity.ToListAsync();
             var result = lstWarehouseCapasity.ToPagedList(pageNumber, pageRowSize);
 
-            return View(result);
+            return View("WarehouseCapacity/WarehouseCapacity", result);
         }
 
         public async Task<IActionResult> WarehouseView(int? page)
@@ -101,9 +108,8 @@ namespace WMS.Controllers
 
 
         [HttpGet, ActionName("CreateReck")]
-        public IActionResult CreateReck(int reckQuantity, long warehouseId, int row, int column)
+        public IActionResult CreateReck(int reckQuantity, int warehouseId, int row, int column)
         {
-
             var reck = new Reck()
             {
                 WarehouseId = warehouseId,
@@ -151,6 +157,30 @@ namespace WMS.Controllers
             catch (Exception ex)
             {
                 string err = @"Exception occured at Users/Create: " + ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
+        [HttpPost, ActionName("CreateWarehouseCapacity")]
+        public async Task<JsonResult> CreateWarehouseCapacity(WarehouseCapacityDefination obj)
+        {
+            var result = (dynamic)null;
+            try
+            {
+                if (ModelState.IsValid)
+                {
+                    obj.IsActive = true;
+                    _context.WarehouseCapacityDefination.Add(obj);
+                    await _context.SaveChangesAsync();
+                    return result = Json(new { success = true, message = "Warehouse Capacity successfully created.", redirectUrl = @"/Warehouses/WarehouseCapacity" });
+                }
+                else
+                    return result = Json(new { success = false, message = "Data is not valid.", redirectUrl = "" });
+
+            }
+            catch (Exception ex)
+            {
+                string err = @"Exception occured at Warehouses/CreateWarehouseCapacity: " + ex.ToString();
                 return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
             }
         }
@@ -205,6 +235,31 @@ namespace WMS.Controllers
                 return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
             }
         }
+        
+        [HttpPost, ActionName("DeleteWarehouseCapasity")]
+        public async Task<JsonResult> DeleteWarehouseCapasity(WarehouseCapacityDefination model)
+        {
+            var result = (dynamic)null;
+            try
+            {
+                var wh = await _context.WarehouseCapacityDefination.FindAsync(model.Id);
+
+                if (wh != null)
+                {
+                    _context.WarehouseCapacityDefination.Remove(wh);
+                    await _context.SaveChangesAsync();
+
+                    return result = Json(new { success = true, message = " Record successfully deleted.", redirectUrl = @"/Warehouses/WarehouseCapacity" });
+                }
+                else
+                    return result = Json(new { success = false, message = " Record is not found.", redirectUrl = "" });
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
 
         [HttpPost, ActionName("CreateReck")]
         public async Task<JsonResult> CreateReck(ReckVM obj)
@@ -215,7 +270,7 @@ namespace WMS.Controllers
                 if (ModelState.IsValid)
                 {
 
-                    var isReckExist = _context.Reck.Where(r => r.SetupRow == obj.Reck.SetupRow && r.SetupColumn == obj.Reck.SetupColumn);
+                    var isReckExist = _context.Reck.Where(r => r.SetupRow == obj.Reck.SetupRow && r.SetupColumn == obj.Reck.SetupColumn && r.WarehouseId == obj.Reck.WarehouseId);
                     if (isReckExist.Count() >= obj.WarehouseCapacity.ReckQuantity)
                     {
                         return result = Json(new { success = false, message = "No more space available to set new reck on this position base on designed!", redirectUrl = "" });

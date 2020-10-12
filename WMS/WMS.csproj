@@ -2,12 +2,22 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
+    <UserSecretsId>742dd452-3f21-48bf-a513-43a6bd7f906b</UserSecretsId>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="_Database\WMSDB.db" />
+    <Content Include="_Database\WMSDB.mdf" />
+    <Content Include="_Database\WMSDB_log.ldf" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.ViewFeatures" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.2" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="2.2.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="2.2.0" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.2.4" />
     <PackageReference Include="X.PagedList.Mvc.Core" Version="7.5.0" />
     <PackageReference Include="NETCore.MailKit" Version="2.0.2" />

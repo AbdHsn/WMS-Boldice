@@ -61,16 +61,31 @@ namespace WMS
             services.AddDbContext<WMSDBContext>(option =>
             option.UseSqlServer(Configuration["ConnectionStrings:DefaultConnection"]));
 
-            //Offline Database ...
+
+            //Offline .mdf Database ... Not Work
             //services.AddDbContext<WMSDBContext>(option =>
             //{
             //    string conn = Configuration.GetConnectionString("connection");
-            //    if (conn.Contains("%CONTENTROOTPATH%"))
+            //    string conn = Configuration["ConnectionStrings:connection"];
+            //    if (conn.Contains("%root%"))
             //    {
-            //        conn = conn.Replace("%CONTENTROOTPATH%", _contentRootPath);
+            //        conn = conn.Replace("%root%", _contentRootPath);
             //    }
             //    option.UseSqlServer(conn);
             //});
+
+
+            //SQLite Database ...
+            //services.AddDbContext<WMSDBContext>(option =>
+            //{
+            //    string conn = Configuration["ConnectionStrings:SQLite"];
+            //    if (conn.Contains("%root%"))
+            //    {
+            //        conn = conn.Replace("%root%", _contentRootPath);
+            //    }
+            //    option.UseSqlite(conn);
+            //});
+
 
         }
 

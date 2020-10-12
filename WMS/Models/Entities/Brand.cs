@@ -9,6 +9,5 @@ namespace WMS.Models.Entities
         public string Name { get; set; }
         public string SmallImage { get; set; }
         public string BigImage { get; set; }
-        public DateTime? CreateDate { get; set; }
     }
 }

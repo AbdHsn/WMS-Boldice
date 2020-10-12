@@ -253,7 +253,7 @@ namespace WMS.Controllers
                                 {
                                     NewQuantity = Convert.ToInt32(model.Quantity),
                                     ProductId = Convert.ToInt64(model.ProductId),
-                                    WarehouseId = Convert.ToInt64(model.WarehouseId),
+                                    WarehouseId = Convert.ToInt32(model.WarehouseId),
                                     ReferenecId = model.AdjustmentNo,
                                     TableReference = "StockAdjustment",
                                     Note = "Generated From Stock/CreateStockAdjustment"
@@ -275,7 +275,7 @@ namespace WMS.Controllers
                                 _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
                                 {
                                     NewQuantity = Convert.ToInt32(model.Quantity),
-                                    WarehouseId = Convert.ToInt64(model.WarehouseId),
+                                    WarehouseId = Convert.ToInt32(model.WarehouseId),
                                     ProductId = Convert.ToInt64(model.ProductId),
                                     ReferenecId = model.AdjustmentNo,
                                     TableReference = "StockAdjustment",
@@ -350,7 +350,7 @@ namespace WMS.Controllers
                                 {
                                     NewQuantity = Convert.ToInt32(model.Quantity),
                                     ProductId = Convert.ToInt64(model.ProductId),
-                                    WarehouseId = Convert.ToInt64(model.WarehouseId),
+                                    WarehouseId = Convert.ToInt32(model.WarehouseId),
                                     ReferenecId = model.AdjustmentNo,
                                     TableReference = "StockAdjustment",
                                     Note = "Generated From Stock/CreateStockAdjustment"
@@ -372,7 +372,7 @@ namespace WMS.Controllers
                                 _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
                                 {
                                     NewQuantity = Convert.ToInt32(model.Quantity),
-                                    WarehouseId = Convert.ToInt64(model.WarehouseId),
+                                    WarehouseId = Convert.ToInt32(model.WarehouseId),
                                     ProductId = Convert.ToInt64(model.ProductId),
                                     ReferenecId = model.AdjustmentNo,
                                     TableReference = "StockAdjustment",

@@ -81,7 +81,6 @@ namespace WMS.Controllers
             {
                 if (ModelState.IsValid)
                 {
-                    model.Brand.CreateDate = DateTime.UtcNow;
                     _context.Brand.Add(model.Brand);
                     await _context.SaveChangesAsync();
 

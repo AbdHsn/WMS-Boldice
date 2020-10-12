@@ -7,6 +7,7 @@ namespace WMS.Models.Entities
     {
         public long Id { get; set; }
         public long? OrderId { get; set; }
+        public int? WarehouseId { get; set; }
         public long? ProductId { get; set; }
         public int? Quantity { get; set; }
         public decimal? Price { get; set; }
@@ -18,5 +19,7 @@ namespace WMS.Models.Entities
         public decimal? DiscountRate { get; set; }
         public decimal? DiscountAmount { get; set; }
         public decimal? Total { get; set; }
+        public string ProductStatus { get; set; }
+        public DateTime? LastUpdate { get; set; }
     }
 }

@@ -1,0 +1,52 @@
+﻿@model WMS.Models.Entities.WarehouseCapacityDefination
+<div class="col-md-12">
+    <form enctype="multipart/form-data" id="frmCreateForm">
+        <div class="row">
+            <div class="col-md-12 col-sm-12">
+                <div class="form-group">
+                    <label class="control-label">Choose Warehouse</label>
+                    <select asp-for="WarehouseId" class="form-control" asp-items="ViewBag.Warehouse">
+                        <option disabled selected value="" class="">Select Warehouse</option>
+                    </select>
+                    <span asp-validation-for="WarehouseId" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3 col-sm-12">
+                <div class="form-group">
+                    <label asp-for="Row" class="control-label">Row</label>
+                    <input asp-for="Row" class="form-control" />
+                    <span asp-validation-for="Row" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-12">
+                <div class="form-group">
+                    <label asp-for="Column" class="control-label">Column</label>
+                    <input asp-for="Column" class="form-control" />
+                    <span asp-validation-for="Column" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="col-md-6 col-sm-12">
+                <div class="form-group">
+                    <label asp-for="ReckQuantity" class="control-label">Assignable Reck Quantity</label>
+                    <input asp-for="ReckQuantity" class="form-control" />
+                    <span asp-validation-for="ReckQuantity" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group right-align">
+                    <br />
+                    <br />
+                    <hr />
+                    <button type="button" class="btn btn-sm btn-outline-success" style="width:150px" onclick='insertRecord("Warehouses", "CreateWarehouseCapacity", "frmCreateForm")'> <i class="zmdi zmdi-save"></i> Save</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" style="width:150px" onclick='closeModalCreateForm("mdlCreateForm","CreateForm")'><i class="zmdi zmdi-close"></i> Cancel</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

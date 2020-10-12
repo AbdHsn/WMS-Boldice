@@ -25,6 +25,10 @@ namespace WMS.Models.Entities
         public virtual DbSet<ItemSpace> ItemSpace { get; set; }
         public virtual DbSet<Manufacturer> Manufacturer { get; set; }
         public virtual DbSet<OrderDetails> OrderDetails { get; set; }
+        public virtual DbSet<OrderDispatch> OrderDispatch { get; set; }
+        public virtual DbSet<OrderDispatchDetails> OrderDispatchDetails { get; set; }
+        public virtual DbSet<OrderReturn> OrderReturn { get; set; }
+        public virtual DbSet<OrderReturnDetails> OrderReturnDetails { get; set; }
         public virtual DbSet<Orders> Orders { get; set; }
         public virtual DbSet<Payment> Payment { get; set; }
         public virtual DbSet<PaymentMethods> PaymentMethods { get; set; }
@@ -82,7 +86,7 @@ namespace WMS.Models.Entities
 
                 entity.Property(e => e.Description).HasMaxLength(50);
 
-                entity.Property(e => e.TypeName).HasMaxLength(100);
+                entity.Property(e => e.TypeName).HasMaxLength(50);
             });
 
             modelBuilder.Entity<Brand>(entity =>
@@ -92,8 +96,6 @@ namespace WMS.Models.Entities
                     .IsUnique();
 
                 entity.Property(e => e.BigImage).HasMaxLength(100);
-
-                entity.Property(e => e.CreateDate).HasColumnType("datetime");
 
                 entity.Property(e => e.Name).HasMaxLength(100);
 
@@ -185,9 +187,9 @@ namespace WMS.Models.Entities
 
                 entity.Property(e => e.BigImage).HasMaxLength(100);
 
-                entity.Property(e => e.ContactInfo).HasMaxLength(400);
+                entity.Property(e => e.ContactInfo).HasMaxLength(150);
 
-                entity.Property(e => e.ManufacturerName).HasMaxLength(200);
+                entity.Property(e => e.ManufacturerName).HasMaxLength(100);
 
                 entity.Property(e => e.SmallImage).HasMaxLength(100);
             });
@@ -200,13 +202,57 @@ namespace WMS.Models.Entities
 
                 entity.Property(e => e.DiscountRate).HasColumnType("decimal(18, 2)");
 
+                entity.Property(e => e.LastUpdate).HasColumnType("datetime");
+
                 entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
+
+                entity.Property(e => e.ProductStatus).HasMaxLength(15);
 
                 entity.Property(e => e.Total).HasColumnType("decimal(18, 2)");
 
                 entity.Property(e => e.VatAmount).HasColumnType("decimal(18, 2)");
 
                 entity.Property(e => e.VatRate).HasColumnType("decimal(18, 2)");
+            });
+
+            modelBuilder.Entity<OrderDispatch>(entity =>
+            {
+                entity.HasIndex(e => e.DispatchNo)
+                    .HasName("UQ__OrderDis__434D95C739A83EF7")
+                    .IsUnique();
+
+                entity.Property(e => e.DispatchDate).HasColumnType("datetime");
+
+                entity.Property(e => e.DispatchNo).HasMaxLength(20);
+
+                entity.Property(e => e.Status).HasMaxLength(25);
+            });
+
+            modelBuilder.Entity<OrderDispatchDetails>(entity =>
+            {
+                entity.Property(e => e.LastUpdate).HasColumnType("datetime");
+
+                entity.Property(e => e.ProductStatus).HasMaxLength(15);
+            });
+
+            modelBuilder.Entity<OrderReturn>(entity =>
+            {
+                entity.HasIndex(e => e.ReturnNo)
+                    .HasName("UQ__OrderRet__F445F15AE54AFF67")
+                    .IsUnique();
+
+                entity.Property(e => e.ReturnDate).HasColumnType("datetime");
+
+                entity.Property(e => e.ReturnNo).HasMaxLength(20);
+
+                entity.Property(e => e.Status).HasMaxLength(25);
+            });
+
+            modelBuilder.Entity<OrderReturnDetails>(entity =>
+            {
+                entity.Property(e => e.LastUpdate).HasColumnType("datetime");
+
+                entity.Property(e => e.ProductStatus).HasMaxLength(15);
             });
 
             modelBuilder.Entity<Orders>(entity =>
@@ -322,6 +368,10 @@ namespace WMS.Models.Entities
                 entity.Property(e => e.CreatedDate).HasColumnType("datetime");
 
                 entity.Property(e => e.ItemSerial).HasMaxLength(30);
+
+                entity.Property(e => e.ManualSerial).HasMaxLength(40);
+
+                entity.Property(e => e.PackSerial).HasMaxLength(40);
             });
 
             modelBuilder.Entity<ProductType>(entity =>

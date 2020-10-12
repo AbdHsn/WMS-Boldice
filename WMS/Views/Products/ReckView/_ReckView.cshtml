@@ -1,0 +1,46 @@
+﻿@model IEnumerable<WMS.Models.PageModels.ProductVM.ReckView.ReckViewVM>
+
+
+
+<div class="h-100">
+    <div class="d-flex align-items-center justify-content-center h-100">
+
+        @if (Model.Count() <= 0)
+        {
+            <h5 class="text-danger">No Reck Available</h5>
+        }
+        else
+        {
+            @foreach (var item in Model)
+            {
+                <table class="table-bordered table-hover m-2">
+                    @foreach (var innerItem in item.ListOfItems)
+                    {
+                        <tr>
+                            <td class="p-2">Level @innerItem.ItemSpace.ReckLevel</td>
+                            <td class="p-1">
+                                @if (Convert.ToBoolean(innerItem.ItemSpace.IsAllocated))
+                                {
+                                    <b>Model Name:  @innerItem.Products?.Name</b> <br />
+                                    <small> Serial No:  @innerItem.ProductItems?.ItemSerial</small><br />
+                                    <small> Inserted Date:  @innerItem.ItemSpace?.LastUpdate  </small>
+                                }
+                                else
+                                {
+                                    <b class="m-5">Empty</b>
+
+                                }
+                            </td>
+
+                        </tr>
+                    }
+                    <tr><td colspan="2"> <h5 class="text-center mt-2">@item.Reck.ReckName</h5></td> </tr>
+                </table>
+            }
+
+        }
+
+
+
+    </div>
+</div>

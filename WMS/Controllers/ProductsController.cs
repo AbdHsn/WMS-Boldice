@@ -19,6 +19,7 @@ using WMS.Models.PageModels.ItemVM;
 using WMS.Models.PageModels.ProductEntry;
 using WMS.Models.PageModels.ProductVM;
 using WMS.Models.PageModels.ProductVM.ProductEntry;
+using WMS.Models.PageModels.ProductVM.ReckView;
 using X.PagedList;
 
 namespace POSMVC.Controllers
@@ -142,10 +143,19 @@ namespace POSMVC.Controllers
         [HttpGet, ActionName("CreateProductModel")]
         public async Task<IActionResult> CreateProductModel()
         {
-            ViewData["ProductType"] = new SelectList(await _context.ProductType.ToListAsync(), "Id", "TypeName");
-            ViewData["Brand"] = new SelectList(await _context.Brand.ToListAsync(), "Id", "Name");
-            ViewData["Manufacturer"] = new SelectList(await _context.Manufacturer.ToListAsync(), "Id", "ManufacturerName");
+            try
+            {
+                ViewData["ProductType"] = new SelectList(await _context.ProductType.Select( p=> new { p.Id, p.TypeName}).ToListAsync(), "Id", "TypeName");
+                ViewData["Brand"] = new SelectList(await _context.Brand.Select(b => new { b.Id, b.Name }).ToListAsync(), "Id", "Name");
+                ViewData["Manufacturer"] = new SelectList(await _context.Manufacturer.Select(m => new { m.Id, m.ManufacturerName }).ToListAsync(), "Id", "ManufacturerName");
+              
+            }
+            catch (Exception ex)
+            {
+                string error = ex.ToString();
+            }
             return PartialView("_CreateProductModel", new Products());
+
         }
 
         [HttpGet, ActionName("EditProductModel")]
@@ -170,6 +180,42 @@ namespace POSMVC.Controllers
                 ViewData["UserTypeId"] = new SelectList(_context.UserType, "Id", "TypeName");
                 return PartialView("_UpdateProduct", new Products());
             }
+        }
+        #endregion
+
+        #region ReckView
+        [HttpGet, ActionName("ReckView")]
+        public IActionResult ReckView(long warehouseId, int row, int column)
+        {
+            var result = (dynamic)null;
+
+            var getRecks = _context.Reck.Where(r => r.SetupRow == row && r.SetupColumn == column && r.WarehouseId == warehouseId);
+            if (getRecks == null)
+            {
+                return result = Json(new { success = false, message = "No reck found!", redirectUrl = "" });
+            }
+
+            var recks = new List<ReckViewVM>();
+            foreach (var item in getRecks)
+            {
+                var getReckItems = from iS in _context.ItemSpace
+                                   where iS.WarehouseId == warehouseId && iS.ReckId == item.Id
+                                   join pI in _context.ProductItems on iS.ProductItemId equals pI.Id into tmpProductItem from pI in tmpProductItem.DefaultIfEmpty()
+                                   join p in _context.Products on pI.ProductId  equals p.Id into tmpProduct from p in tmpProduct.DefaultIfEmpty()
+                                   select new ListOfItem
+                                   {
+                                       ItemSpace = iS,
+                                       ProductItems = pI,
+                                       Products = p
+                                   };
+
+                var reck = new ReckViewVM();
+                reck.Reck = item;
+                reck.ListOfItems = getReckItems.ToList();
+                recks.Add(reck);
+            }
+
+            return PartialView("ReckView/_ReckView", recks);
         }
         #endregion
 
@@ -257,7 +303,7 @@ namespace POSMVC.Controllers
                             {
                                 NewQuantity = Convert.ToInt32(model.ProductInsertion.Quantity),
                                 ProductId = Convert.ToInt64(model.ProductInsertion.ProductId),
-                                WarehouseId = Convert.ToInt64(model.WarehouseId),
+                                WarehouseId = Convert.ToInt32(model.WarehouseId),
                                 ReferenecId = model.ProductInsertion.EntryNo,
                                 TableReference = "ProductInsertion",
                                 Note = "Generated From Products/InsertProductItem"
@@ -279,7 +325,7 @@ namespace POSMVC.Controllers
                             _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
                             {
                                 NewQuantity = Convert.ToInt32(model.ProductInsertion.Quantity),
-                                WarehouseId = Convert.ToInt64(model.WarehouseId),
+                                WarehouseId = Convert.ToInt32(model.WarehouseId),
                                 ProductId = Convert.ToInt64(model.ProductInsertion.ProductId),
                                 ReferenecId = model.ProductInsertion.EntryNo,
                                 TableReference = "ProductInsertion",

@@ -1,0 +1,369 @@
+﻿@using X.PagedList.Mvc.Core;
+@using X.PagedList;
+@model IEnumerable<WMS.Models.PageModels.StockVM.StockOfWarehousesVM>
+
+
+@{
+    ViewData["Title"] = "Stock";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    //var productType = (SelectList)ViewBag.ProductType;
+    //var selectedProductTypeName = (string)ViewBag.SelectedProductTypeName;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-30">
+                <div class="card-body pb-0">
+                    <div class="justify-content-between align-items-center mb-20">
+                        <h6 class="card-title mb-0">Place Order</h6>
+                        <br />
+                        <div class="row">
+                            <div class="col-md-6">
+
+                                <div class="btn-group" role="group" aria-label="Button group with nested dropdown">
+                                    @*<button type="button" class="btn btn-sm btn-outline-success" title="Single purchase entry" onclick='openModalCreateForm("mdlCreateForm","CreateForm","Stock","CreateStockAdjustment")'><i class="zmdi zmdi-collection-plus"></i> Stock Adjustment </button>*@
+                                </div>
+                            </div>
+                            <div class="col-md-6 float-right">
+                                <div class="input-group">
+                                    @*<input class="form-control" name="ProductNo" type="search" placeholder="Search by Product Model" id="searchItem">*@
+                                    @*<div class="btn-group mb-2 pr-2">
+                                            <button type="button" class="btn btn-sm btn-fill-default  dropdown-toggle" data-toggle="dropdown" aria-expanded="false" style="height:40px;">View As : @selectedProductTypeName</button>
+                                            <div class="dropdown-menu">
+                                                <a class="dropdown-item @(selectedProductTypeName == "All" ? "disabled" : "")" href="/Items/Items?page=1&ddlId=0">All</a>
+                                                @foreach (var item in productType)
+                                                {
+                                                    <a class="dropdown-item @(string.Equals(selectedProductTypeName, item.Text) ? "disabled" : "")" href="/Items/Items?page=1&ddlId=@item.Value">@item.Text</a>
+                                                }
+                                            </div>aa
+                                        </div>*@
+
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- #region  Add to Cart Section-->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6> Order Item Details </h6>
+                            <hr />
+                        </div>
+                        <div class="col-sm-12 col-md-4 col-lg-4">
+                            <label class="control-label">Choose Warehouse*</label>
+                            <select id="Warehouse_Id" class="selectpicker show-tick show-menu-arrow form-control" data-size="10" title="Select Warehouse" asp-items="ViewBag.Warehouses" data-live-search="true">
+                            </select>
+                        </div>
+                        <div class="col-sm-12 col-md-4 col-lg-4">
+                            <label class="control-label">Choose Product Model*</label>
+                            <select id="Product_Id" class="selectpicker show-tick show-menu-arrow form-control" data-size="10" title="Select Product Model" data-live-search="true">
+                            </select>
+                        </div>
+                        <div class="col-sm-12 col-md-2 col-lg-2">
+                            <label class="control-label ">Select Quantity</label>
+                            <input class="form-control" type="number" id="selectedQuantity" name="selectedQuantity" />
+                            <span class="text-danger"></span>
+                        </div>
+                        <div class="col-sm-12 col-md-2 col-lg-2">
+                            <label class="control-label" for="itemUnitPrice">Available Quantity</label>
+                            <input class="form-control" readonly id="availableQuantity" name="availableQuantity" />
+                        </div>
+                        <div class="col-md-12" style="padding-top:29px; float:right">
+                            <button type="button" class="btn btn-sm btn-rounded btn-outline-danger py-1 pull-right" id="btnClear"><i class="zmdi zmdi-format-clear"></i>Clear</button>
+                            <button type="button" class="btn btn-sm btn-rounded btn-outline-info py-1 pull-right" id="btnCart"><i class="zmdi zmdi-shopping-cart-plus"></i>Add to PickUp</button>
+                        </div>
+
+                    </div>
+                    <br />
+                    <!-- #region  Cart List Preview Section-->
+                    <div>
+                        <div id='rowCartHeader' class="row" style="display:none">
+                            <div class="col-sm-12 col-md-12 col-lg-12">
+                                <label class="control-label font-weight-bold"> PickUp List:</label>
+                            </div>
+                        </div>
+
+                        <div id="cartPreview">
+
+                        </div>
+
+                        <hr />
+                        <div id='rowCartTotal' class="row" style="display:none">
+                            <div class="col-sm-4 col-md-4 col-lg-4">
+                                <label class="control-label"><b>Total pickup Items</b></label>
+                            </div>
+                            <div class="col-sm-4 col-md-4 col-lg-4">
+
+                            </div>
+                            <div class="col-sm-2 col-md-2 col-lg-2">
+                                <label id="cartTotal" class="control-label"></label>
+                            </div>
+                            <div class="col-sm-2 col-md-2 col-lg-2">
+                            </div>
+
+                            <br />
+                        </div>
+                    </div>
+                    <br />
+                    <br />
+                    <!-- #endregion -->
+                    <!-- #endregion -->
+
+                    <div class="row">
+                        <div class="input-group mb-3 col-md-6">
+
+                        </div>
+                        <div class="clearfix pb-2 col-md-6">
+                            <button type="button" id="btnPlaceOrder" class="btn btn-sm btn-outline-success float-sm-right float-md-right float-lg-right">
+                                <i id="icoPlaceOrder" class="zmdi zmdi-check"></i>
+                                Place Order
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="input-group mb-3 col-md-6">
+
+                        </div>
+                        <div class="clearfix pb-2 col-md-6">
+                            <button type="button" id="btnPrint" class="btn btn-sm btn-outline-success float-sm-right float-md-right float-lg-right">
+                                <i id="icoPlaceOrder" class="zmdi zmdi-check"></i>
+                                Print
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts{
+    <script src="~/js/pdf-make/js/pdfmake.js"></script>
+    <script src="~/js/pdf-make/js/vfs_fonts.js"></script>
+    <script src="~/js/searchable-dropdown/bootstrap-select.js"></script>
+    <script type="text/javascript">
+        //All Global Variables
+        var lstItems = new Array();
+        var countOrderItem = 0;
+        var availableQty = 0;
+        var cartList = new Array();
+        //~All Global Variables
+
+        //Use For Dropdown Search
+        $('.selectpicker').selectpicker({
+            liveSearch: true,
+            maxOptions: 1
+        });
+
+        $("#Warehouse_Id").on('change', () => {
+            var warehouseId = $("#Warehouse_Id").val();
+            if (warehouseId > 0) {
+                $('#Product_Id').empty();
+                $('#availableQuantity').val("");
+                $('#selectedQuantity').val("");
+                var serverData = getJsonData("Orders", "GetProducts", warehouseId, 'GET');
+                console.log(serverData);
+
+                var item;
+                if (serverData.length != 0) {
+                    $.each(serverData, function (i, row) {
+                        item += "<option value='" + row.id + "'>" + row.name + "</option>";
+                    });
+                } else {
+                    item = "<option value='0'>No product found</option>";
+                }
+                $('#Product_Id').html(item);
+                $('#Product_Id').selectpicker('refresh');
+            }
+        });
+
+        function getAvailableQuantity(listOfArray, warehouseId, productId) {
+            var quantity;
+            var filterProduct = listOfArray.filter(f => f.warehouseId === warehouseId && f.productId === productId);
+            if (filterProduct.length > 0) {
+                // quantity = filterProduct[filterProduct.length - 1]["availabelQuantity"];
+                var currentQuantity = filterProduct.map(o => o.quantity).reduce((a, c) => { return parseFloat(a) + parseFloat(c) }, 0);
+                var difference = availableQty - currentQuantity;
+                if (difference <= 0)
+                    quantity = 0;
+                else
+                    quantity = difference
+            } else {
+                quantity = $("#Product_Id option:selected").text().split("Available Quantity: ")[1];
+            }
+            console.log("Available Qty");
+            console.log(quantity);
+            return quantity;
+        }
+
+        $("#Product_Id").on('change', () => {
+            // availableQty = $("#Product_Id option:selected").text().split("Available Quantity: ")[1];
+            var warehouseId = $("#Warehouse_Id").val();
+            var productId = $("#Product_Id").val();
+            availableQty = $("#Product_Id option:selected").text().split("Available Quantity: ")[1];
+            availableQty = getAvailableQuantity(cartList, warehouseId, productId);
+            $('#availableQuantity').val(availableQty);
+        });
+
+        $('#selectedQuantity').on("change", () => {
+            var itemQty = $('#selectedQuantity').val();
+            if (!!(itemQty % 1)) {
+                showMessage("Quantity as fraction is not allowed. ", "", "warning");
+                return;
+            }
+            if (itemQty > availableQty) {
+                showMessage("Can't add pickup list while selected quantity more than available quantity", "", "warning");
+                return;
+            }
+        });
+
+        $('#btnClear').on("click", () => {
+            clearItem();
+        });
+
+        function clearItem() {
+            $('#selectedQuantity').val("");
+            $('#availableQuantity').val("");
+            $('#Product_Id').empty();
+            $('#Product_Id').selectpicker('refresh');
+            $("#Warehouse_Id").val('default').selectpicker("refresh");
+        }
+
+        $('#btnCart').on("click", () => {
+
+            var warehouseId = $("#Warehouse_Id").val();
+            var productId = $("#Product_Id").val();
+            var selectedQuantity = parseInt($("#selectedQuantity").val());
+
+            //null value prevention
+            if (!warehouseId || warehouseId <= 0) {
+                showMessage("Warehouse is not selected. ", "", "warning");
+                return;
+            }
+            if (!productId || productId <= 0) {
+                showMessage("Product model is not selected. ", "", "warning");
+                return;
+            }
+            if (!selectedQuantity || selectedQuantity <= 0) {
+                showMessage("Minimum 1 quantity selection is require. ", "", "warning");
+                return;
+            }
+            //null value prevention
+
+            //More than available quantity selection prevent.
+            if (selectedQuantity > availableQty) {
+                showMessage("Sorry, selected quantity is out of stock", "", "warning");
+                return;
+            }
+
+            //Object Array Initialization
+            var itemData = {
+                warehouseId: warehouseId,
+                warehouseLabel: $("#Warehouse_Id option:selected").text(),
+                productId: productId,
+                productLabel: $("#Product_Id option:selected").text().split("Available Quantity: ")[0],
+                availabelQuantity: availableQty - selectedQuantity,
+                quantity: selectedQuantity,
+                countNo: countOrderItem
+            };
+            cartList.push(itemData);
+
+            var drawItemPreview = `
+                                                             <div id='rowNo${itemData.countNo}' class="row">
+                                                                <div class="col-sm-4 col-md-4 col-lg-4">
+                                                                    <label class="control-label">${itemData.warehouseLabel}</label>
+                                                                    <input type="hidden" name="ListOrderDetails[${itemData.countNo}].WarehouseId" value="${itemData.warehouseId}" class="form-control form-control-customized" />
+                                                                </div>
+                                                                <div class="col-sm-4 col-md-4 col-lg-4">
+                                                                    <label class="control-label">${itemData.productLabel}</label>
+                                                                    <input type="hidden" name="ListOrderDetails[${itemData.countNo}].ProductId" value="${itemData.productId}" class="form-control form-control-customized" />
+                                                                </div>
+
+                                                                <div class="col-sm-2 col-md-2 col-lg-2">
+                                                                    <label class="control-label ">${itemData.quantity}</label>
+                                                                    <input type="hidden" name="ListOrderDetails[${itemData.countNo}].Quantity" value="${itemData.quantity}" class="form-control form-control-customized" />
+                                                                </div>
+                                                                <div class="col-sm-2 col-md-2 col-lg-2">
+                                                                    <button type="button" class="btn btn-sm btn-rounded btn-outline-danger py-1 px-3 pull-right" title="Remove" onclick='removeItemFromCartList("rowNo${itemData.countNo}", "${itemData.countNo}")'><i class="zmdi zmdi-close"> Remove</i></button>
+                                                                </div>
+                                                            <br />
+                                                            </div>`;
+            countOrderItem += 1;
+            toggleCartHeaderFooter(cartList);
+            var sumOfTotal = cartList.map(o => o.quantity).reduce((a, c) => { return parseFloat(a) + parseFloat(c) }, 0);
+            $('#cartPreview').append(drawItemPreview);
+            $('#cartTotal').text(sumOfTotal);
+            clearItem();
+
+            console.log("Final Cart List ");
+            console.log(cartList);
+        });
+
+        function toggleCartHeaderFooter(lst) {
+            var lstCount = parseInt(lst.length);
+            if (lstCount === undefined || lstCount == 0) {
+                $('#rowCartHeader').hide();
+                $('#rowCartTotal').hide();
+            }
+            else {
+                $('#rowCartHeader').show();
+                $('#rowCartTotal').show();
+            }
+        }
+
+        function removeItemFromCartList(rowNumber, countNumber) {
+            $('#' + rowNumber).remove();
+
+            cartList = cartList.filter(f => f.countNo != countNumber);
+            var cartListLength = parseInt(cartList.length);
+            if (cartListLength === undefined || cartListLength == 0) {
+
+                $('#cartTotal').text(0);
+            }
+            else {
+                var sumOfTotal = cartList.map(o => o.quantity).reduce((a, c) => { return parseFloat(a) + parseFloat(c); }, 0);
+                $('#cartTotal').text(sumOfTotal);
+            }
+            toggleCartHeaderFooter(cartList);
+            console.log(cartList);
+        }
+
+
+        $('#btnPlaceOrder').on("click", () => {
+
+            modelObject = {
+                listOrderDetails: cartList
+            };
+
+            var cartListLength = parseInt(cartList.length);
+            if (cartListLength <= 0) {
+                showMessage("Atleast one item is require to place order ", "", "warning");
+                return;
+            }
+
+            insertRecordWithoutForm("Orders", "CreateOrders", modelObject, "icoPlaceOrder", "zmdi zmdi-check");
+        });
+
+        $('#btnPrint').on("click", () => {
+
+            var serverData = getJsonData("Orders", "pdf", null, 'GET');
+            console.log(serverData);
+
+            var docDefinition = {
+                content:["Helloo..."]
+            }
+
+            pdfMake.createPdf(docDefinition).download();
+
+        });
+
+
+    </script>
+
+}
+

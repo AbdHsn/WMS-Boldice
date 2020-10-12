@@ -9,11 +9,13 @@ namespace WMS.Models.PageModels.OrdersVM
     public class OrdersVM
     {
         public Orders Orders { get; set; }
-        public Users Users { get; set; }
-        public UserType UserType { get; set; }
-        public PersonalDetail PersonalDetail { get; set; }
-        public  decimal PaidAmount { get; set; }
-        public  decimal DueAmount { get; set; }
-        public  String PaidStatus { get; set; }
+        public List<OrderDetailWithOthers> OrderDetails { get; set; }
+    }
+
+    public class OrderDetailWithOthers {
+        public OrderDetails OrderDetails { get; set; }
+        public Warehouse Warehouse { get; set; }
+        public Products Products { get; set; }
     }
 }
+ 
