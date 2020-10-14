@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Transactions;
 using CommonLogics;
@@ -11,16 +10,16 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using MimeKit.IO.Filters;
 using Newtonsoft.Json;
 using WMS.CommonBusinessFunctions;
 using WMS.CommonBusinessFunctions.BusinessModels;
 using WMS.Models.Entities;
 using WMS.Models.PageModels.OrdersVM;
-using WMS.Models.PageModels.PaymentsVM;
 using WMS.Models.SharedModels;
 using X.PagedList;
-using ZXing.QrCode.Internal;
+
+using OrderVM = WMS.Models.PageModels.OrdersVM;
+using PrintVM = WMS.Models.PageModels.OrdersVM.PrintVM;
 
 namespace WMS.Controllers
 {
@@ -49,33 +48,7 @@ namespace WMS.Controllers
         }
         #endregion
 
-
-        //[HttpGet, ActionName("pdf")]
-        //[Produces("application/json")]
-        //public IActionResult Pdf()
-        //{
-        //    try
-        //    {
-        //        var getOrder =    from o in _context.Orders
-        //                          where o.Id == 1
-        //                          select new OrdersVM{ 
-        //                             Orders = o,
-        //                             OrderDetails = _context.OrderDetails.Where(od => od.OrderId == o.Id).ToList()
-        //                          };
-
-        //        var result = getOrder;
-        //        return Ok(result);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        string err = ex.ToString();
-        //        return BadRequest();
-        //    }
-        //}
-
-        //#region Orders
-
-
+        #region Order Methods
         public async Task<IActionResult> Orders(int? page, string orderStatus = null)
         {
             var pageNumber = page ?? 1;
@@ -139,6 +112,259 @@ namespace WMS.Controllers
             return View(result);
         }
 
+        [HttpGet, ActionName("CreateOrder")]
+        public async Task<IActionResult> CreateOrder()
+        {
+            await Task.Run(async () =>
+            {
+                ViewData["Warehouses"] = new SelectList(await _context.Warehouse.ToListAsync(), "Id", "Title");
+            });
+            return View("CreateOrder");
+        }
+
+        [HttpPost, ActionName("CreateOrders")]
+        public JsonResult CreateOrders(CreateOrdersVM model)
+        {
+            var result = (dynamic)null;
+            try
+            {
+
+                if (model != null)
+                {
+
+                    using (TransactionScope transaction = new TransactionScope())
+                    {
+                        var newOrder = new Orders();
+                        Orders lastOrder = _context.Orders.OrderByDescending(o => o.OrderPlaceDate).FirstOrDefault();
+
+                        //Order No generating...
+                        if (lastOrder != null)
+                        {
+                            int newOrderNo = Convert.ToInt32(lastOrder.OrderNo.Substring(10)) + 1;
+                            newOrder.OrderNo = _cmnBusinessFunction.GenerateNumberWithPrefix("ORD-", newOrderNo.ToString());
+                        }
+                        else
+                        {
+                            newOrder.OrderNo = _cmnBusinessFunction.GenerateNumberWithPrefix("ORD-", 1.ToString());
+                        }
+
+                        //Importing Order Master record...
+                        //newOrder.UserId = model.Users.Id;
+                        newOrder.GrandTotal = model.ListOrderDetails.Sum(s => s.Total);
+                        newOrder.OrderPlaceDate = DateTime.Now;
+                        newOrder.CollectionDate = DateTime.UtcNow;
+                        newOrder.OrderStatus = StaticValues.OrderStatus.Submitted.ToString();
+                        _context.Orders.Add(newOrder);
+                        _context.SaveChanges();
+                        //Importing Order Child record...
+                        foreach (var item in model.ListOrderDetails)
+                        {
+                            //Checking stock is available or not, if not return back.
+                            var isStockAvailable = from s in _context.Stock
+                                                   where s.ProductId == item.ProductId && s.WarehouseId == item.WarehouseId
+                                                   join p in _context.Products on s.ProductId equals p.Id
+                                                   select new { s, p };
+
+                            var currentStock = isStockAvailable.FirstOrDefault();
+                            if (item.Quantity > currentStock.s.AvailableQuantity)
+                            {
+                                return result = Json(new { success = false, message = " Order can't proceed, " + currentStock.p.ProductCode + " out of stock.", redirectUrl = "" });
+                            }
+
+                            item.OrderId = newOrder.Id;
+                            item.ProductStatus = StaticValues.OrderStatus.Submitted.ToString();
+                            // item.CollectionDate = DateTime.Now;
+                            _context.OrderDetails.Add(item);
+                            _context.SaveChanges();
+
+                            //Updating Stock of current item
+                            currentStock.s.LastQuantity = currentStock.s.AvailableQuantity;
+                            currentStock.s.AvailableQuantity -= item.Quantity;
+                            currentStock.s.LastUpdate = DateTime.UtcNow;
+
+                            _context.Stock.Update(currentStock.s);
+                            _context.SaveChanges();
+                            //Creating stock trace
+                            _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                            {
+                                NewQuantity = -Convert.ToInt32(item.Quantity),
+                                ProductId = Convert.ToInt64(item.ProductId),
+                                WarehouseId = Convert.ToInt32(item.WarehouseId),
+                                ReferenecId = newOrder.OrderNo,
+                                TableReference = "Orders",
+                                Note = "Generated From Orders/CreateOrders"
+                            });
+                        }
+
+                        transaction.Complete();
+                        return result = Json(new { success = true, message = " Order successfully placed.", redirectUrl = @"/Orders/CreateOrderPrint?OrderId=" + newOrder.Id });
+                        //return RedirectToAction("CCOrderInvoice", new { orderId =  newOrder.Id });
+                    }
+                }
+                else
+                    return result = Json(new { success = false, message = "Failed to place order.", redirectUrl = "" });
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
+        [HttpGet, ActionName("CreateOrderPrint")]
+        public IActionResult CreateOrderPrint(long orderId)
+        {
+            return View("CreateOrderPrint", orderId);
+        }
+
+        [Produces("application/json")]
+        [HttpGet, ActionName("GetOrderPrintData")]
+        public IActionResult GetOrderPrintData(string jsonData)
+        {
+            try
+            {
+                var result = (dynamic)null;
+                var orderId = JsonConvert.DeserializeObject<long>(jsonData);
+
+                var fetchCompany = _context.Company.FirstOrDefault();
+                //Converting logo into base64 string
+                string logoPath = System.IO.Path.Combine(_he.WebRootPath, fetchCompany.SmallLogo);
+                string extension = System.IO.Path.GetExtension(logoPath);
+                string logo = "data:image/" + extension + ";base64," + Convert.ToBase64String(System.IO.File.ReadAllBytes(logoPath));
+
+                var fetchOrder = _context.Orders.Find(orderId);
+                //QRCode generating 
+                string generateQr = "data:image/" + ".png" + ";base64," + Convert.ToBase64String(_cmnFunction.CreateQrCode(string.Format("Company Name: {0}, OrderNo: {1}", fetchCompany.Name, fetchOrder.OrderNo)));
+
+                var orderDetails = new ArrayList();
+                if (fetchOrder != null)
+                {
+                    var fetchOrderDetails = from od in _context.OrderDetails
+                                            where od.OrderId == fetchOrder.Id
+                                            join p in _context.Products on od.ProductId equals p.Id
+                                            join w in _context.Warehouse on od.WarehouseId equals w.Id
+                                            select new ArrayList {
+                                                p.Name, w.Title, od.Quantity
+                                             };
+
+                    result = new PrintVM.CreateOrderPrintVM()
+                    {
+                        Company = fetchCompany,
+                        Logo = logo,
+                        QRCode = generateQr,
+                        Orders = fetchOrder,
+                        OrderDetails = fetchOrderDetails.ToList(),
+                        TotalProduct = fetchOrderDetails.Count()
+                    };
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return BadRequest();
+            }
+        }
+
+        [HttpPost, ActionName("OrderCancel")]
+        public JsonResult OrderCancel(Orders model)
+        {
+            var result = (dynamic)null;
+            try
+            {
+                var or = _context.Orders.Find(model.Id);
+
+                if (or != null)
+                {
+                    var fetchOrderDetail = _context.OrderDetails.Where(od => od.OrderId == or.Id && od.ProductStatus != StaticValues.OrderStatus.Cancelled.ToString()).ToList();
+
+                    if (fetchOrderDetail.Count() > 0)
+                    {
+                        TransactionOptions options = new TransactionOptions();
+                        options.IsolationLevel = IsolationLevel.Serializable;
+                        options.Timeout = new TimeSpan(0, 10, 0);
+                        using (TransactionScope transaction = new TransactionScope(TransactionScopeOption.Required, options))
+                        {
+                            foreach (var item in fetchOrderDetail)
+                            {
+                                //Stock Generate only once after loop
+                                var isStockExist = _context.Stock.Where(s => s.ProductId == item.ProductId && s.WarehouseId == item.WarehouseId).FirstOrDefault();
+                                if (isStockExist != null)
+                                {
+                                    isStockExist.LastQuantity = isStockExist.AvailableQuantity;
+                                    isStockExist.AvailableQuantity += item.Quantity;
+                                    isStockExist.LastUpdate = DateTime.UtcNow;
+
+                                    _context.Stock.Update(isStockExist);
+                                    _context.SaveChanges();
+
+                                    _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                                    {
+                                        NewQuantity = Convert.ToInt32(item.Quantity),
+                                        ProductId = Convert.ToInt64(item.ProductId),
+                                        WarehouseId = Convert.ToInt32(item.WarehouseId),
+                                        ReferenecId = or.OrderNo,
+                                        TableReference = "Order Cancel",
+                                        Note = "Generated From Order Cancellation Orders/OrderCancel"
+                                    });
+                                }
+                                else
+                                {
+                                    var newStock = new Stock()
+                                    {
+                                        WarehouseId = item.WarehouseId,
+                                        ProductId = item.ProductId,
+                                        AvailableQuantity = item.Quantity,
+                                        LastQuantity = 0,
+                                        CreatedDate = DateTime.UtcNow
+                                    };
+                                    _context.Stock.Add(newStock);
+                                    _context.SaveChanges();
+
+                                    _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                                    {
+                                        NewQuantity = Convert.ToInt32(item.Quantity),
+                                        WarehouseId = Convert.ToInt32(item.WarehouseId),
+                                        ProductId = Convert.ToInt64(item.ProductId),
+                                        ReferenecId = or.OrderNo,
+                                        TableReference = "Order Cancel",
+                                        Note = "Generated From Order Cancellation Orders/OrderCancel"
+                                    });
+                                }
+
+                                item.ProductStatus = StaticValues.OrderStatus.Cancelled.ToString();
+                                item.LastUpdate = DateTime.UtcNow;
+                                _context.OrderDetails.Update(item);
+                                _context.SaveChanges();
+                            }
+
+                            or.OrderStatus = StaticValues.OrderStatus.Cancelled.ToString();
+                            or.LastUpdate = DateTime.UtcNow;
+                            _context.Orders.Update(or);
+                            _context.SaveChanges();
+
+                            transaction.Complete();
+                        }
+                        return result = Json(new { success = true, message = " Order successfully cancelled.", redirectUrl = @"/Orders/Orders" });
+
+                    }
+                    return result = Json(new { success = false, message = " Order already cancelled.", redirectUrl = "" });
+
+
+                }
+                else
+                    return result = Json(new { success = false, message = " Record is not found.", redirectUrl = "" });
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+        #endregion
+
+        #region OrderDispatch Methods
         public async Task<IActionResult> OrderDispatch(int? page, string orderStatus = null)
         {
             var result = (dynamic)null;
@@ -146,8 +372,8 @@ namespace WMS.Controllers
             {
                 var pageNumber = page ?? 1;
                 int pageRowSize = 10;
-                
-                var fetchDispatchOrders = (from od in _context.OrderDispatch
+
+                var fetchDispatchOrders = await (from od in _context.OrderDispatch
                                            join o in _context.Orders on od.OrderId equals o.Id
                                            orderby od.DispatchDate descending
                                            select new OrderDispatchVM
@@ -170,7 +396,7 @@ namespace WMS.Controllers
                                                                            Warehouse = w,
                                                                            Reck = r
                                                                        }).ToList()
-                                           }).ToList();
+                                           }).ToListAsync();
                 var filterValues = new int[] { 4, 5 };
                 ViewData["ddlOrderStatus"] = new SelectList(
                     from StaticValues.OrderStatus e in Enum.GetValues(typeof(StaticValues.OrderStatus))
@@ -190,71 +416,51 @@ namespace WMS.Controllers
             return View(result);
         }
 
-        public async Task<IActionResult> OrderReturn(int? page, string orderStatus = null)
+        [HttpGet, ActionName("CreateDispatchOrder")]
+        public async Task<IActionResult> CreateDispatchOrder(long orderId)
         {
-            var pageNumber = page ?? 1;
-            int pageRowSize = 10;
-
-            var fetchOrderReturns = new List<OrderReturnVM>();
-            if (string.IsNullOrEmpty(orderStatus) || orderStatus == "All")
+            var model = (dynamic)null;
+            try
             {
-                var fetchReturnOrder = from or in _context.OrderReturn
-                                 join o in _context.Orders on or.OrderId equals o.Id
-                                 orderby or.ReturnDate descending
-                                 select new OrderReturnVM
-                                 {
-                                     OrderReturn = or,
-                                     Orders = o,
-                                     OrderReturnDetails = (from ord in _context.OrderReturnDetails
-                                                     where ord.ReturnId == or.Id
-                                                     join pI in _context.ProductItems on ord.ProductItemId equals pI.Id
-                                                     join p in _context.Products on pI.ProductId equals p.Id
-                                                     select new OrderReturnDetailWithOthers
-                                                     {
-                                                         OrderReturnDetails = ord,
-                                                         ProductItems = pI,
-                                                         Products = p
-                                                     }).ToList()
-                                 };
-                fetchOrderReturns = fetchReturnOrder.ToList();
+                var fetchOrder = _context.Orders.Find(orderId);
+                if (fetchOrder != null)
+                {
+                    var fetchOrderDetails = from od in _context.OrderDetails
+                                            where od.OrderId == fetchOrder.Id
+                                            join p in _context.Products on od.ProductId equals p.Id
+                                            join w in _context.Warehouse on od.WarehouseId equals w.Id
+                                            select new OrderVM.OrderWithDetails
+                                            {
+                                                OrderDetails = od,
+                                                Products = p,
+                                                Warehouse = w,
+                                                ProductItemDetails = (from pi in _context.ProductItems
+                                                                      join iS in _context.ItemSpace on pi.Id equals iS.ProductItemId
+                                                                      join r in _context.Reck on iS.ReckId equals r.Id
+                                                                      where pi.ProductId == od.ProductId && iS.WarehouseId == w.Id && iS.IsAllocated == true
+                                                                      orderby iS.LastUpdate
+                                                                      select new OrderVM.ProductItemWithDetails
+                                                                      {
+                                                                          ProductItems = pi,
+                                                                          ItemSpace = iS,
+                                                                          Reck = r
+                                                                      }).Take(Convert.ToInt32(od.Quantity)).ToList()
+                                            };
+                    var returnModel = new OrderVM.CreateOrderDispatchVM()
+                    {
+                        Orders = fetchOrder,
+                        OrderDetails = await fetchOrderDetails.ToListAsync()
+                    };
+                    model = returnModel;
+                }
             }
-            //else
-            //{
-            //    var fetchOrder = from o in _context.Orders
-            //                     where o.OrderStatus == orderStatus
-            //                     orderby o.OrderPlaceDate descending
-            //                     select new OrdersVM
-            //                     {
-            //                         Orders = o,
-            //                         OrderDetails = (from od in _context.OrderDetails
-            //                                         where od.OrderId == o.Id
-            //                                         join w in _context.Warehouse on od.WarehouseId equals w.Id
-            //                                         join p in _context.Products on od.ProductId equals p.Id
-            //                                         select new OrderDetailWithOthers
-            //                                         {
-            //                                             OrderDetails = od,
-            //                                             Warehouse = w,
-            //                                             Products = p
-            //                                         }).ToList()
-            //                     };
-            //    fetchOrderReturns = fetchOrder.ToList();
-            //}
+            catch (Exception ex)
+            {
+                string error = ex.ToString();
+            }
 
-
-            var filterValues = new int[] { 6, 7 };
-            ViewData["ddlOrderStatus"] = new SelectList(
-                from StaticValues.OrderStatus e in Enum.GetValues(typeof(StaticValues.OrderStatus))
-                where filterValues.Contains((int)e)
-                select new { Id = (int)e, Name = e.ToString() }, "Id", "Name");
-
-            ViewData["SelectedOrderStatus"] = string.IsNullOrEmpty(orderStatus) ? "All" : orderStatus;
-            ViewData["PageNumber"] = pageNumber;
-
-            var result = await fetchOrderReturns.ToPagedListAsync(pageNumber, pageRowSize);
-
-            return View(result);
+            return PartialView("_OrderDispatch", model);
         }
-
 
         [HttpPost, ActionName("CreateDispatchOrder")]
         public async Task<JsonResult> CreateDispatchOrder(Orders obj)
@@ -265,19 +471,19 @@ namespace WMS.Controllers
                 if (ModelState.IsValid)
                 {
 
-                    var fetchOrder = _context.Orders.Find(obj.Id);
+                    var fetchOrder = await _context.Orders.FindAsync(obj.Id);
                     if (fetchOrder != null)
                     {
                         var fetchOrderDetails = from od in _context.OrderDetails
                                                 where od.OrderId == fetchOrder.Id
-                                                select new OrderWithDetails
+                                                select new OrderVM.OrderWithDetails
                                                 {
                                                     OrderDetails = od,
                                                     ProductItemDetails = (from pi in _context.ProductItems
                                                                           join iS in _context.ItemSpace on pi.Id equals iS.ProductItemId
                                                                           where pi.ProductId == od.ProductId && iS.WarehouseId == od.WarehouseId && iS.IsAllocated == true
                                                                           orderby iS.LastUpdate
-                                                                          select new ProductItemWithDetails
+                                                                          select new OrderVM.ProductItemWithDetails
                                                                           {
                                                                               ProductItems = pi,
                                                                               ItemSpace = iS,
@@ -365,462 +571,73 @@ namespace WMS.Controllers
                 return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
             }
         }
+        #endregion
 
-        //public async Task<IActionResult> OrdersStatusModified(long orderId, string newOrderStatus, int? page, string oldOrderStatus = null)
-        //{
-        //    var fetchOrder = await _context.Orders.FindAsync(orderId);
-        //    if (fetchOrder != null)
-        //    {
-        //        fetchOrder.OrderStatus = newOrderStatus;
-        //        fetchOrder.LastUpdate = DateTime.UtcNow;
-        //        _context.Orders.Update(fetchOrder);
-        //        _context.SaveChanges();
-        //    }
-
-        //    return RedirectToAction("Orders", new { page, orderStatus = oldOrderStatus });
-        //}
-
-        [HttpGet, ActionName("CreateDispatchOrder")]
-        public async Task<IActionResult> CreateDispatchOrder(long orderId)
+        #region OrderReturn Methods
+        public async Task<IActionResult> OrderReturn(int? page, string orderStatus = null)
         {
-            var model = (dynamic)null;
-            try
-            {
-                var fetchOrder = _context.Orders.Find(orderId);
-                if (fetchOrder != null)
-                {
-                    var fetchOrderDetails = from od in _context.OrderDetails
-                                            where od.OrderId == fetchOrder.Id
-                                            join p in _context.Products on od.ProductId equals p.Id
-                                            join w in _context.Warehouse on od.WarehouseId equals w.Id
-                                            select new OrderWithDetails
-                                            {
-                                                OrderDetails = od,
-                                                Products = p,
-                                                Warehouse = w,
-                                                ProductItemDetails = (from pi in _context.ProductItems
-                                                                      join iS in _context.ItemSpace on pi.Id equals iS.ProductItemId
-                                                                      join r in _context.Reck on iS.ReckId equals r.Id
-                                                                      where pi.ProductId == od.ProductId && iS.WarehouseId == w.Id && iS.IsAllocated == true
-                                                                      orderby iS.LastUpdate
-                                                                      select new ProductItemWithDetails
-                                                                      {
-                                                                          ProductItems = pi,
-                                                                          ItemSpace = iS,
-                                                                          Reck = r
-                                                                      }).Take(Convert.ToInt32(od.Quantity)).ToList()
-                                            };
-                    var returnModel = new CreateOrderDispatchVM()
-                    {
-                        Orders = fetchOrder,
-                        OrderDetails = fetchOrderDetails.ToList()
-                    };
-                    model = returnModel;
-                }
-            }
-            catch (Exception ex)
-            {
-                string error = ex.ToString();
-            }
+            var pageNumber = page ?? 1;
+            int pageRowSize = 10;
 
-            return PartialView("_OrderDispatch", model);
+            var fetchOrderReturns = new List<OrderReturnVM>();
+            if (string.IsNullOrEmpty(orderStatus) || orderStatus == "All")
+            {
+                var fetchReturnOrder = from or in _context.OrderReturn
+                                       join o in _context.Orders on or.OrderId equals o.Id
+                                       orderby or.ReturnDate descending
+                                       select new OrderReturnVM
+                                       {
+                                           OrderReturn = or,
+                                           Orders = o,
+                                           OrderReturnDetails = (from ord in _context.OrderReturnDetails
+                                                                 where ord.ReturnId == or.Id
+                                                                 join pI in _context.ProductItems on ord.ProductItemId equals pI.Id
+                                                                 join p in _context.Products on pI.ProductId equals p.Id
+                                                                 select new OrderReturnDetailWithOthers
+                                                                 {
+                                                                     OrderReturnDetails = ord,
+                                                                     ProductItems = pI,
+                                                                     Products = p
+                                                                 }).ToList()
+                                       };
+                fetchOrderReturns = fetchReturnOrder.ToList();
+            }
+            //else
+            //{
+            //    var fetchOrder = from o in _context.Orders
+            //                     where o.OrderStatus == orderStatus
+            //                     orderby o.OrderPlaceDate descending
+            //                     select new OrdersVM
+            //                     {
+            //                         Orders = o,
+            //                         OrderDetails = (from od in _context.OrderDetails
+            //                                         where od.OrderId == o.Id
+            //                                         join w in _context.Warehouse on od.WarehouseId equals w.Id
+            //                                         join p in _context.Products on od.ProductId equals p.Id
+            //                                         select new OrderDetailWithOthers
+            //                                         {
+            //                                             OrderDetails = od,
+            //                                             Warehouse = w,
+            //                                             Products = p
+            //                                         }).ToList()
+            //                     };
+            //    fetchOrderReturns = fetchOrder.ToList();
+            //}
+
+
+            var filterValues = new int[] { 6, 7 };
+            ViewData["ddlOrderStatus"] = new SelectList(
+                from StaticValues.OrderStatus e in Enum.GetValues(typeof(StaticValues.OrderStatus))
+                where filterValues.Contains((int)e)
+                select new { Id = (int)e, Name = e.ToString() }, "Id", "Name");
+
+            ViewData["SelectedOrderStatus"] = string.IsNullOrEmpty(orderStatus) ? "All" : orderStatus;
+            ViewData["PageNumber"] = pageNumber;
+
+            var result = await fetchOrderReturns.ToPagedListAsync(pageNumber, pageRowSize);
+
+            return View(result);
         }
-
-        [HttpPost, ActionName("OrderCancel")]
-        public async Task<JsonResult> OrderCancel(Orders model)
-        {
-            var result = (dynamic)null;
-            try
-            {
-                var or = await _context.Orders.FindAsync(model.Id);
-
-                if (or != null)
-                {
-                    var fetchOrderDetail = _context.OrderDetails.Where(od => od.OrderId == or.Id).ToList();
-
-                    TransactionOptions options = new TransactionOptions();
-                    options.IsolationLevel = IsolationLevel.Serializable;
-                    options.Timeout = new TimeSpan(0, 10, 0);
-                    using (TransactionScope transaction = new TransactionScope(TransactionScopeOption.Required, options))
-                    {
-                        foreach (var item in fetchOrderDetail)
-                        {
-                            //Stock Generate only once after loop
-                            var isStockExist = _context.Stock.Where(s => s.ProductId == item.ProductId && s.WarehouseId == item.WarehouseId).FirstOrDefault();
-                            if (isStockExist != null)
-                            {
-                                isStockExist.LastQuantity = isStockExist.AvailableQuantity;
-                                isStockExist.AvailableQuantity += item.Quantity;
-                                isStockExist.LastUpdate = DateTime.UtcNow;
-
-                                _context.Stock.Update(isStockExist);
-                                _context.SaveChanges();
-
-                                _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
-                                {
-                                    NewQuantity = Convert.ToInt32(item.Quantity),
-                                    ProductId = Convert.ToInt64(item.ProductId),
-                                    WarehouseId = Convert.ToInt32(item.WarehouseId),
-                                    ReferenecId = or.OrderNo,
-                                    TableReference = "OrderDetails",
-                                    Note = "Generated From Order Cancellation Orders/OrderCancel"
-                                });
-                            }
-                            else
-                            {
-                                var newStock = new Stock()
-                                {
-                                    WarehouseId = item.WarehouseId,
-                                    ProductId = item.ProductId,
-                                    AvailableQuantity = item.Quantity,
-                                    LastQuantity = 0,
-                                    CreatedDate = DateTime.UtcNow
-                                };
-                                _context.Stock.Add(newStock);
-                                _context.SaveChanges();
-
-                                _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
-                                {
-                                    NewQuantity = Convert.ToInt32(item.Quantity),
-                                    WarehouseId = Convert.ToInt32(item.WarehouseId),
-                                    ProductId = Convert.ToInt64(item.ProductId),
-                                    ReferenecId = or.OrderNo,
-                                    TableReference = "OrderDetails",
-                                    Note = "Generated From Order Cancellation Orders/OrderCancel"
-                                });
-                            }
-
-                            item.ProductStatus = StaticValues.OrderStatus.Cancelled.ToString();
-                            item.LastUpdate = DateTime.UtcNow;
-                            _context.OrderDetails.Update(item);
-                            _context.SaveChanges();
-                        }
-
-                        or.OrderStatus = StaticValues.OrderStatus.Cancelled.ToString();
-                        or.LastUpdate = DateTime.UtcNow;
-                        _context.Orders.Update(or);
-                        _context.SaveChanges();
-
-                        transaction.Complete();
-                    }
-                    return result = Json(new { success = true, message = " Order successfully cancelled.", redirectUrl = @"/Orders/Orders" });
-                }
-                else
-                    return result = Json(new { success = false, message = " Record is not found.", redirectUrl = "" });
-            }
-            catch (Exception ex)
-            {
-                string err = ex.ToString();
-                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
-            }
-        }
-
-
-
-       
-        //  #region Order
-        [HttpGet, ActionName("CreateOrder")]
-        public async Task<IActionResult> CreateOrder()
-        {
-            await Task.Run(async () =>
-            {
-                ViewData["Warehouses"] = new SelectList(await _context.Warehouse.ToListAsync(), "Id", "Title");
-            });
-            return View("CreateOrder");
-        }
-
-        [Produces("application/json")]
-        [HttpGet, ActionName("GetProducts")]
-        public async Task<IActionResult> GetProducts(string jsonData)
-        {
-            try
-            {
-                var data = JsonConvert.DeserializeObject<int>(jsonData);
-
-                var getProducts = from p in _context.Products
-                                  join s in _context.Stock on p.Id equals s.ProductId
-                                  where s.WarehouseId == data
-                                  select new { p.Id, Name = p.Name + " Available Quantity: " + s.AvailableQuantity };
-
-                var result = getProducts;
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                string err = ex.ToString();
-                return BadRequest();
-            }
-        }
-
-        [HttpPost, ActionName("CreateOrders")]
-        public JsonResult CreateOrders(CreateOrdersVM model)
-        {
-            var result = (dynamic)null;
-            try
-            {
-
-                if (model != null)
-                {
-
-                    using (TransactionScope transaction = new TransactionScope())
-                    {
-                        var newOrder = new Orders();
-                        Orders lastOrder = _context.Orders.OrderByDescending(o => o.OrderPlaceDate).FirstOrDefault();
-
-                        //Order No generating...
-                        if (lastOrder != null)
-                        {
-                            int newOrderNo = Convert.ToInt32(lastOrder.OrderNo.Substring(10)) + 1;
-                            newOrder.OrderNo = _cmnBusinessFunction.GenerateNumberWithPrefix("ORD-", newOrderNo.ToString());
-                        }
-                        else
-                        {
-                            newOrder.OrderNo = _cmnBusinessFunction.GenerateNumberWithPrefix("ORD-", 1.ToString());
-                        }
-
-                        //Importing Order Master record...
-                        //newOrder.UserId = model.Users.Id;
-                        newOrder.GrandTotal = model.ListOrderDetails.Sum(s => s.Total);
-                        newOrder.OrderPlaceDate = DateTime.Now;
-                        newOrder.CollectionDate = DateTime.UtcNow;
-                        newOrder.OrderStatus = StaticValues.OrderStatus.Submitted.ToString();
-                        _context.Orders.Add(newOrder);
-                        _context.SaveChanges();
-                        //Importing Order Child record...
-                        foreach (var item in model.ListOrderDetails)
-                        {
-                            //Checking stock is available or not, if not return back.
-                            var isStockAvailable = from s in _context.Stock
-                                                   where s.ProductId == item.ProductId && s.WarehouseId == item.WarehouseId
-                                                   join p in _context.Products on s.ProductId equals p.Id
-                                                   select new { s, p };
-
-                            var currentStock = isStockAvailable.FirstOrDefault();
-                            if (item.Quantity > currentStock.s.AvailableQuantity)
-                            {
-                                return result = Json(new { success = false, message = " Order can't proceed, " + currentStock.p.ProductCode + " out of stock.", redirectUrl = "" });
-                            }
-
-                            item.OrderId = newOrder.Id;
-                            item.ProductStatus = StaticValues.OrderStatus.Submitted.ToString();
-                            // item.CollectionDate = DateTime.Now;
-                            _context.OrderDetails.Add(item);
-                            _context.SaveChanges();
-
-                            //Updating Stock of current item
-                            currentStock.s.LastQuantity = currentStock.s.AvailableQuantity;
-                            currentStock.s.AvailableQuantity -= item.Quantity;
-                            currentStock.s.LastUpdate = DateTime.UtcNow;
-
-                            _context.Stock.Update(currentStock.s);
-                            _context.SaveChanges();
-                            //Creating stock trace
-                            _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
-                            {
-                                NewQuantity = -Convert.ToInt32(item.Quantity),
-                                ProductId = Convert.ToInt64(item.ProductId),
-                                ReferenecId = newOrder.OrderNo,
-                                TableReference = "Orders",
-                                Note = "Generated From Orders/CreateOrders"
-                            });
-                        }
-
-                        transaction.Complete();
-                        return result = Json(new { success = true, message = " Order successfully placed.", redirectUrl = @"/Orders/Orders" });
-                        //return RedirectToAction("CCOrderInvoice", new { orderId =  newOrder.Id });
-                    }
-                }
-                else
-                    return result = Json(new { success = false, message = "Failed to place order.", redirectUrl = "" });
-            }
-            catch (Exception ex)
-            {
-                string err = ex.ToString();
-                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
-            }
-        }
-
-        //[HttpGet, ActionName("CCOrderInvoice")]
-        //public async Task<IActionResult> CCInvoice(long? orderId)
-        //{
-        //    var result = (dynamic)null;
-        //    var order = await _context.Orders.FindAsync(orderId);
-        //    if (order == null)
-        //    {
-        //        return result = Json(new { success = false, message = " Order details are not found.", redirectUrl = "/Technical/{404}" });
-        //    }
-
-        //    var getUser = _context.Users.Where(u => u.Id == order.UserId).FirstOrDefault();
-        //    var getPersonalInfo = _context.PersonalDetail.Where(u => u.UserId == order.UserId).FirstOrDefault();
-        //    var orderDetails = from od in _context.OrderDetails
-        //                       where od.OrderId == order.Id
-        //                       join p in _context.Products on od.ProductId equals p.Id
-        //                       select new Models.PageModels.OrdersVM.CCOrderInvoice.ListOfOrderDetail
-        //                       {
-        //                           OrderDetail = od,
-        //                           Product = p
-        //                       };
-        //    //Get Payments records
-        //    var getPayments = _context.Payment.Where(p => p.InstrumentNo == order.OrderNo);
-
-        //    var model = new CCOrderInvoiceVM()
-        //    {
-        //        Order = order,
-        //        User = getUser,
-        //        PersonalDetail = getPersonalInfo,
-        //        ListOrderDetails = orderDetails.ToList(),
-        //        TotalAmount = order.GrandTotal,
-        //        PaidAmount = getPayments == null ? 0 : getPayments.Sum(s => s.PaidAmount),
-        //        QrCode = _cmnFunction.CreateQrCode(string.Format("#:{0}, OrderNo:{1}, OrderDate:{2}, TotalPrice:{3}", order.Id, order.OrderNo, order.OrderPlaceDate, order.GrandTotal))
-        //    };
-        //    model.DueAmount = model.TotalAmount - model.PaidAmount;
-        //    ViewData["PaymentMethods"] = new SelectList(_context.PaymentMethods, "Id", "Name");
-
-        //    return View("Invoices/CCOrderInvoice", model);
-        //}
-
-        //#endregion
-
-        //#region Revceive OrdersPayment
-        //[HttpPost, ActionName("CreatePayment")]
-        //public JsonResult OrderPayment(Models.PageModels.PaymentsVM.PaymentsVM model)
-        //{
-        //    var result = (dynamic)null;
-        //    try
-        //    {
-
-        //        if (model != null)
-        //        {
-
-        //            using (TransactionScope transaction = new TransactionScope())
-        //            {
-        //                var newPayment = new Payment();
-        //                Payment lastPayment = _context.Payment.OrderByDescending(o => o.TransactionDate).FirstOrDefault();
-
-        //                //Order No generating...
-        //                if (lastPayment != null)
-        //                {
-        //                    int newPaymentNo = Convert.ToInt32(lastPayment.TransactionNo.Substring(10)) + 1;
-        //                    newPayment.TransactionNo = _cmnBusinessFunction.GenerateNumberWithPrefix("TRN-", newPaymentNo.ToString());
-        //                }
-        //                else
-        //                {
-        //                    newPayment.TransactionNo = _cmnBusinessFunction.GenerateNumberWithPrefix("TRN-", 1.ToString());
-        //                }
-
-        //                //Creating new payment record...
-        //                newPayment.UserId = model.UserId;
-        //                newPayment.InstrumentNo = model.OrderNo;
-        //                newPayment.TransactionDate = DateTime.UtcNow;
-        //                newPayment.PaidAmount = model.PaidAmount;
-        //                newPayment.PaymentMethodId = model.PaymentMethodId;
-        //                newPayment.TableReference = "Orders";
-        //                _context.Payment.Add(newPayment);
-        //                _context.SaveChanges();
-
-        //                transaction.Complete();
-        //                return result = Json(new { success = true, message = " Payment successfully Done.", redirectUrl = model.RedirectLink + "?orderId=" + model.OrderId });
-        //            }
-        //        }
-        //        else
-        //            return result = Json(new { success = false, message = "Payment Failed!.", redirectUrl = "" });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        string err = ex.ToString();
-        //        return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
-        //    }
-        //}
-        //#endregion
-
-        //#region Customer GetMethods
-        //[HttpGet, ActionName("CreateCustomer")]
-        //public async Task<IActionResult> Create()
-        //{
-        //    var customerTypes = new List<int> { 4, 5, 6, 7 };
-
-        //    ViewData["UserTypeId"] = new SelectList(await _context.UserType.Where(u => customerTypes.Contains(u.Id)).ToListAsync(), "Id", "TypeName");
-        //    return PartialView("_CreateCustomer", new CreateCustomerVM());
-        //}
-        //#endregion
-
-        //#region Customer PostMethods
-        //[HttpPost, ActionName("CreateCustomer")]
-        //public async Task<JsonResult> CreateCustomer(CreateCustomerVM user)
-        //{
-        //    var result = (dynamic)null;
-        //    try
-        //    {
-        //        if (ModelState.IsValid)
-        //        {
-        //            user.Users.CreateDate = DateTime.UtcNow;
-        //            user.Users.UserName = user.Users.Email;
-        //            _context.Users.Add(user.Users);
-        //            await _context.SaveChangesAsync();
-
-        //            user.PersonalDetail.UserId = user.Users.Id;
-        //            _context.PersonalDetail.Add(user.PersonalDetail);
-        //            await _context.SaveChangesAsync();
-
-        //            ////Image insertion Code
-        //            //if (user.Users.Id > 0)
-        //            //{
-        //            //    if (user.file != null)
-        //            //    {
-        //            //        string extension = Path.GetExtension(user.file.FileName);
-        //            //        string smallImage = "StaticFiles/Users/SmallImage/";
-        //            //        string bigImage = "StaticFiles/Users/BigImage/";
-
-        //            //        if (_cmnFunction.SaveImage(user.file, user.Users.Id.ToString(), Path.Combine(_he.WebRootPath, smallImage), extension, 60, 60))
-        //            //        {
-        //            //            user.Users.SmallImage = smallImage + user.Users.Id.ToString() + extension;
-        //            //        }
-
-        //            //        if (_cmnFunction.SaveImage(user.file, user.Users.Id.ToString(), Path.Combine(_he.WebRootPath, bigImage), extension))
-        //            //        {
-        //            //            user.Users.BigImage = bigImage + user.Users.Id.ToString() + extension;
-        //            //        }
-
-        //            //        _context.Entry(user.Users).State = EntityState.Modified;
-        //            //        await _context.SaveChangesAsync();
-        //            //    }
-        //            //}
-        //            ////Image insertion Code
-        //            ///
-        //            return result = Json(new { success = true, message = user.PersonalDetail.Name + " successfully created.", redirectUrl = @"/Orders/CLOrder" });
-        //        }
-        //        else
-        //            return result = Json(new { success = false, message = "Data is not valid.", redirectUrl = "" });
-
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        string err = @"Exception occured at Users/Create: " + ex.ToString();
-        //        return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
-        //    }
-        //}
-
-        //#endregion
-
-
-        #region OrderSearchMethods
-
-        [Produces("application/json")]
-        [HttpGet, ActionName("OrderSearch")]
-        public async Task<IActionResult> OrderSearch()
-        {
-            try
-            {
-                string term = HttpContext.Request.Query["term"].ToString();
-                var result = await _context.Orders.Where(p => p.OrderNo.Contains(term)).Select(p => p.OrderNo).ToListAsync();
-                return Ok(result);
-            }
-            catch
-            {
-                return BadRequest();
-            }
-        }
-
 
         [Produces("application/json")]
         [HttpGet, ActionName("CreateOrderReturn")]
@@ -845,21 +662,24 @@ namespace WMS.Controllers
                 var getDispatchOrder = _context.OrderDispatch.Where(o => o.OrderId == getOrder.Id).Select(s => s.Id).ToList();
                 var getReturnableProducts = _context.OrderDispatchDetails.Where(odd => getDispatchOrder.Contains(Convert.ToInt64(odd.DispatchId)));
                 var productReturnableDetails = (from odd in getReturnableProducts
-                                               join pI in _context.ProductItems on odd.ProductItemId equals pI.Id
-                                               join p in _context.Products on pI.ProductId equals p.Id
-                                               select new ProductItemDetails
-                                               {
-                                                   OrderDispatchDetails = odd,
-                                                   ProductItems = pI,
-                                                   Products = p,
-                                                   IsAlreadyReturned = getReturnedProducts.Find(f => f.ProductItemId == odd.ProductItemId) != null ? true : false
-                                               }).ToList();
+                                                join pI in _context.ProductItems on odd.ProductItemId equals pI.Id
+                                                join p in _context.Products on pI.ProductId equals p.Id
+                                                select new ProductItemDetails
+                                                {
+                                                    OrderDispatchDetails = odd,
+                                                    ProductItems = pI,
+                                                    Products = p,
+                                                    IsAlreadyReturned = getReturnedProducts.Find(f => f.ProductItemId == odd.ProductItemId) != null ? true : false
+                                                }).ToList();
 
 
-                result = new CreateOrderReturnVM() { 
+                result = new CreateOrderReturnVM()
+                {
                     Orders = getOrder,
                     ProductItemDetails = productReturnableDetails
                 };
+
+                ViewData["Warehouses"] = new SelectList(await _context.Warehouse.ToListAsync(), "Id", "Title");
 
                 return View("CreateOrderReturn", result);
             }
@@ -876,15 +696,190 @@ namespace WMS.Controllers
             var result = (dynamic)null;
             try
             {
-                var getReturnProducts = model.ProductItemDetails.Where(p => p.IsReturnable == true);
+                var getReturnProducts = model.ProductItemDetails.Where(p => p.IsReturnable == true).ToList();
                 if (getReturnProducts.Count() > 0)
                 {
-                    using (TransactionScope transaction = new TransactionScope())
+                    switch (model.Storage)
                     {
-                    
-                        transaction.Complete();
-                        return result = Json(new { success = true, message = " Order successfully placed.", redirectUrl = @"/Orders/Orders" });
-                        //return RedirectToAction("CCOrderInvoice", new { orderId =  newOrder.Id });
+                        case "VirtualStore":
+                            {
+                                TransactionOptions options = new TransactionOptions();
+                                options.IsolationLevel = IsolationLevel.Serializable;
+                                options.Timeout = new TimeSpan(0, 10, 0);
+                                using (TransactionScope transaction = new TransactionScope(TransactionScopeOption.Required, options))
+                                {
+
+                                    var newRetun = new OrderReturn();
+
+                                    //Return No Generate
+                                    var getLastReturnNo = _context.OrderReturn.OrderByDescending(pu => pu.ReturnDate).FirstOrDefault();
+                                    if (getLastReturnNo != null)
+                                    {
+                                        int creatReturnNo = Convert.ToInt32(getLastReturnNo.ReturnNo.Substring(10)) + 1;
+                                        newRetun.ReturnNo = _cmnBusinessFunction.GenerateNumberWithPrefix("RTN-", creatReturnNo.ToString());
+                                    }
+                                    else
+                                    {
+                                        newRetun.ReturnNo = _cmnBusinessFunction.GenerateNumberWithPrefix("RTN-", 1.ToString());
+                                    }
+
+                                    //Master Record >> Order Return insertion
+                                    newRetun.OrderId = model.Orders.Id;
+                                    //newRetun.Status = "Status will be insert later";
+                                    newRetun.ReturnDate = DateTime.UtcNow;
+                                    _context.OrderReturn.Add(newRetun);
+                                    _context.SaveChanges();
+
+                                    foreach (var item in getReturnProducts)
+                                    {
+                                        //Child Record >> Order Return Detail insertion
+                                        var newReturnDetail = new OrderReturnDetails()
+                                        {
+                                            ProductItemId = item.ProductItems.Id,
+                                            ProductId = item.Products.Id,
+                                            ProductStatus = StaticValues.OrderStatus.FullReturn.ToString(),
+                                            ReturnId = newRetun.Id,
+                                            LastUpdate = DateTime.UtcNow,
+                                        };
+                                        _context.OrderReturnDetails.Add(newReturnDetail);
+                                        _context.SaveChanges();
+
+                                        //Virtual Store insertion
+                                        var newVStore = new VirtualSpace()
+                                        {
+                                            ProductItemId = item.ProductItems.Id,
+                                            FromOrderId = model.Orders.Id,
+                                            Status = "Stored",
+                                            InsertedDate = DateTime.UtcNow
+                                        };
+                                        _context.VirtualSpace.Add(newVStore);
+                                        _context.SaveChanges();
+                                    }
+
+                                    transaction.Complete();
+                                    return result = Json(new { success = true, message = newRetun.ReturnNo + ": Successfully returned to selected warehouse.", redirectUrl = @"/Orders/OrderReturn" });
+                                }
+
+                            }
+                        case "WarehouseStore":
+                            {
+                                if (model.WarehouseId > 0)
+                                {
+                                    //Available Space check
+                                    var isSpaceAvailable = _context.ItemSpace.Where(w => w.WarehouseId == model.WarehouseId && w.IsAllocated == false).ToList();
+                                    if (isSpaceAvailable == null || isSpaceAvailable.Count() < getReturnProducts.Count())
+                                    {
+                                        var getWarehouseTitle = _context.Warehouse.Where(w => w.Id == model.WarehouseId);
+                                        return result = Json(new { success = false, message = "No space available under " + getWarehouseTitle.FirstOrDefault().Title + " for the quantity of " + getReturnProducts.Count().ToString(), redirectUrl = "" });
+                                    }
+
+                                    TransactionOptions options = new TransactionOptions();
+                                    options.IsolationLevel = IsolationLevel.Serializable;
+                                    options.Timeout = new TimeSpan(0, 10, 0);
+                                    using (TransactionScope transaction = new TransactionScope(TransactionScopeOption.Required, options))
+                                    {
+
+                                        var newRetun = new OrderReturn();
+
+                                        //Return No Generate
+                                        var getLastReturnNo = _context.OrderReturn.OrderByDescending(pu => pu.ReturnDate).FirstOrDefault();
+                                        if (getLastReturnNo != null)
+                                        {
+                                            int creatReturnNo = Convert.ToInt32(getLastReturnNo.ReturnNo.Substring(10)) + 1;
+                                            newRetun.ReturnNo = _cmnBusinessFunction.GenerateNumberWithPrefix("RTN-", creatReturnNo.ToString());
+                                        }
+                                        else
+                                        {
+                                            newRetun.ReturnNo = _cmnBusinessFunction.GenerateNumberWithPrefix("RTN-", 1.ToString());
+                                        }
+
+                                        //Order Return insertion
+                                        newRetun.OrderId = model.Orders.Id;
+                                        //newRetun.Status = "Status will be insert later";
+                                        newRetun.ReturnDate = DateTime.UtcNow;
+                                        _context.OrderReturn.Add(newRetun);
+                                        _context.SaveChanges();
+
+                                        for (int i = 0; i < getReturnProducts.Count(); i++)
+                                        {
+                                            var newReturnDetail = new OrderReturnDetails()
+                                            {
+                                                ProductItemId = getReturnProducts[i].ProductItems.Id,
+                                                ProductId = getReturnProducts[i].Products.Id,
+                                                ProductStatus = StaticValues.OrderStatus.FullReturn.ToString(),
+                                                ReturnId = newRetun.Id,
+                                                LastUpdate = DateTime.UtcNow,
+                                            };
+                                            _context.OrderReturnDetails.Add(newReturnDetail);
+                                            _context.SaveChanges();
+
+                                            //Update ItemSpace
+                                            isSpaceAvailable[i].ProductItemId = getReturnProducts[i].ProductItems.Id;
+                                            isSpaceAvailable[i].IsAllocated = true;
+                                            isSpaceAvailable[i].LastUpdate = DateTime.UtcNow;
+                                            isSpaceAvailable[i].ActionedBy = 0;
+                                            _context.ItemSpace.Update(isSpaceAvailable[i]);
+                                            _context.SaveChanges();
+
+                                            //Stock Generate one by one while loop is running
+                                            var isStockExist = _context.Stock.Where(s => s.ProductId == getReturnProducts[i].Products.Id && s.WarehouseId == model.WarehouseId).FirstOrDefault();
+                                            if (isStockExist != null)
+                                            {
+                                                isStockExist.LastQuantity = isStockExist.AvailableQuantity;
+                                                isStockExist.AvailableQuantity += 1;
+                                                isStockExist.LastUpdate = DateTime.UtcNow;
+
+                                                _context.Stock.Update(isStockExist);
+                                                _context.SaveChanges();
+
+                                                _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                                                {
+                                                    NewQuantity = 1,
+                                                    ProductId = getReturnProducts[i].Products.Id,
+                                                    WarehouseId = model.WarehouseId,
+                                                    ReferenecId = newRetun.ReturnNo,
+                                                    TableReference = "OrderReturn",
+                                                    Note = "Generated From Orders/CreateOrderReturn"
+                                                });
+                                            }
+                                            else
+                                            {
+                                                var newStock = new Stock()
+                                                {
+                                                    WarehouseId = model.WarehouseId,
+                                                    ProductId = getReturnProducts[i].Products.Id,
+                                                    AvailableQuantity = 1,
+                                                    LastQuantity = 0,
+                                                    CreatedDate = DateTime.UtcNow
+                                                };
+                                                _context.Stock.Add(newStock);
+                                                _context.SaveChanges();
+
+                                                _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                                                {
+                                                    NewQuantity = 1,
+                                                    WarehouseId = model.WarehouseId,
+                                                    ProductId = getReturnProducts[i].Products.Id,
+                                                    ReferenecId = newRetun.ReturnNo,
+                                                    TableReference = "OrderReturn",
+                                                    Note = "Generated From Orders/CreateOrderReturn"
+                                                });
+                                            }
+                                        }
+
+
+
+                                        transaction.Complete();
+                                        return result = Json(new { success = true, message = newRetun.ReturnNo + ": Successfully returned to selected warehouse.", redirectUrl = @"/Orders/OrderReturn" });
+                                    }
+                                }
+                                else
+                                {
+                                    return result = Json(new { success = false, message = "Please select warehouse to store return product.", redirectUrl = "" });
+                                }
+                            }
+                        default:
+                            return result = Json(new { success = false, message = "Please select storage to return product.", redirectUrl = "" });
                     }
                 }
                 else
@@ -897,7 +892,49 @@ namespace WMS.Controllers
             }
         }
 
+        #endregion
 
+        #region Page Related Methods
+        [Produces("application/json")]
+        [HttpGet, ActionName("GetProducts")]
+        public async Task<IActionResult> GetProducts(string jsonData)
+        {
+            try
+            {
+                var data = JsonConvert.DeserializeObject<int>(jsonData);
+                var result = (dynamic)null;
+                await Task.Run(()=> {
+                    var getProducts = from p in _context.Products
+                                      join s in _context.Stock on p.Id equals s.ProductId
+                                      where s.WarehouseId == data
+                                      select new { p.Id, Name = p.Name + " Available Quantity: " + s.AvailableQuantity };
+
+                    result = getProducts;
+                });
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return BadRequest();
+            }
+        }
+
+        [Produces("application/json")]
+        [HttpGet, ActionName("OrderSearch")]
+        public async Task<IActionResult> OrderSearch()
+        {
+            try
+            {
+                string term = HttpContext.Request.Query["term"].ToString();
+                var result = await _context.Orders.Where(p => p.OrderNo.Contains(term)).Select(p => p.OrderNo).ToListAsync();
+                return Ok(result);
+            }
+            catch
+            {
+                return BadRequest();
+            }
+        }
         #endregion
 
     }

@@ -19,7 +19,7 @@ namespace WMS.CommonBusinessFunctions
         public void CreateStockTrace(CreateStockTraceBM model)
         {
 
-            var isStockTraceExist = _context.StockTrace.Where(st => st.ProductId == model.ProductId).OrderByDescending(st => st.CreatedDate).FirstOrDefault();
+            var isStockTraceExist = _context.StockTrace.Where(st => st.ProductId == model.ProductId && st.WarehouseId == model.WarehouseId).OrderByDescending(st => st.CreatedDate).FirstOrDefault();
 
             var openningQty = isStockTraceExist != null ? isStockTraceExist.ClosingQuantity : 0;
             var currentQty = isStockTraceExist != null ? isStockTraceExist.CurrentQuantity + model.NewQuantity : model.NewQuantity;

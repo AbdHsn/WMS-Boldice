@@ -48,6 +48,7 @@ namespace WMS.Models.Entities
         public virtual DbSet<UserType> UserType { get; set; }
         public virtual DbSet<Users> Users { get; set; }
         public virtual DbSet<Vat> Vat { get; set; }
+        public virtual DbSet<VirtualSpace> VirtualSpace { get; set; }
         public virtual DbSet<Warehouse> Warehouse { get; set; }
         public virtual DbSet<WarehouseCapacityDefination> WarehouseCapacityDefination { get; set; }
 
@@ -575,6 +576,13 @@ namespace WMS.Models.Entities
                 entity.Property(e => e.Title).HasMaxLength(10);
 
                 entity.Property(e => e.VatRate).HasColumnType("decimal(18, 2)");
+            });
+
+            modelBuilder.Entity<VirtualSpace>(entity =>
+            {
+                entity.Property(e => e.InsertedDate).HasColumnType("datetime");
+
+                entity.Property(e => e.Status).HasMaxLength(15);
             });
 
             modelBuilder.Entity<Warehouse>(entity =>

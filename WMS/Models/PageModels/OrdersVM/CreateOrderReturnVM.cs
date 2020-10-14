@@ -10,6 +10,8 @@ namespace WMS.Models.PageModels.OrdersVM
     {
         public Orders Orders { get; set; }
         public List<ProductItemDetails> ProductItemDetails { get; set; }
+        public string Storage { get; set; }
+        public int WarehouseId { get; set; }
     }
 
     public class ProductItemDetails {

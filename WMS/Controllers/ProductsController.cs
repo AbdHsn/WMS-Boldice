@@ -336,6 +336,8 @@ namespace POSMVC.Controllers
                         transaction.Complete();
                         return result = Json(new { success = true, message = model.ProductInsertion.EntryNo + " successfully inserted.", redirectUrl = @"/Products/EntryItems" });
                     }
+               
+                
                 }
                 else
                     return result = Json(new { success = false, message = "Data is not valid.", redirectUrl = "" });

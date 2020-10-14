@@ -6,10 +6,10 @@
   },
   "ConnectionStrings": {
     //Online DB String
-     "DefaultConnection": "Server=AbdHsn-Laptop;Database=WMSDB;User ID=AbdHsn-dbms; Password=123123"
+    "DefaultConnection": "Server=AbdHsn-Laptop;Database=WMSDB;User ID=AbdHsn-dbms; Password=123123"
 
     // Offline DB String
-   // "connection": "Data Source=(LocalDB)\\MSSQLLocalDB;AttachDbFilename=%root%\\_Database\\WMSDB.mdf;Integrated Security=True;Connect Timeout=30",
+    // "connection": "Data Source=(LocalDB)\\MSSQLLocalDB;AttachDbFilename=%root%\\_Database\\WMSDB.mdf;Integrated Security=True;Connect Timeout=30",
 
     //SQLite Database
     //"SQLite": "Data Source=%root%\\_Database\\WMSDB.db"
@@ -17,3 +17,5 @@
   },
   "AllowedHosts": "*"
 }
+
+//Scaffold-dbContext "Server=AbdHsn-Laptop;Database=WMSDB;User ID=AbdHsn-dbms; Password=123123;" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models/Entities -force

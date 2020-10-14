@@ -121,7 +121,7 @@ function insertRecord(controller, action, formId) {
             }
         });
     } else {
-        swal("Failed to Save!", "Form is not valid", "error");
+        swal("Failed to Process!", "Form is not valid, Please fill require fields", "error");
     }
 }
 function insertRecordWithoutForm(controller, action, modelObject, icoId, icoClass) {

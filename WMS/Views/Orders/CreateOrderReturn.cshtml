@@ -22,20 +22,43 @@
                     @if (Model == null)
                     {
 
-                            <div class="text-center">
-                                <span class="badge font-11 badge-soft-purple"> There is no record found to return.</span>
+                        <div class="text-center">
+                            <span class="badge font-11 badge-soft-purple"> There is no record found to return.</span>
 
-                            </div>
+                        </div>
                     }
                     else
                     {
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="font-weight-bold">@Model.Orders.OrderNo</div>
-                            </div>
-                        </div>
 
                         <form id="frmCreateForm">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="font-weight-bold">ORDER NO: @Model.Orders.OrderNo</div>
+                                </div>
+
+                                <div class="col-6">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" id="chkVirtualStorage" name="storage" class="custom-control-input" value="VirtualStore" required>
+                                                <label class="custom-control-label cursor-pointer" data-toggle="tooltip" data-original-title="Virtual storage can be use when Warehouse has not enough available space." for="chkVirtualStorage">Store into Virtual Space</label>
+                                            </div>
+
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" id="chkWarehouse" name="storage" class="custom-control-input" value="WarehouseStore" required>
+                                                <label class="custom-control-label cursor-pointer" data-toggle="tooltip" data-original-title="Store in warehouse require enough space and stock will be increase." for="chkWarehouse">Store into Selected Warehouse</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <select id="Warehouse_Id" name="WarehouseId" class="selectpicker show-tick show-menu-arrow form-control" data-size="10" title="Select Warehouse" asp-items="ViewBag.Warehouses" data-live-search="true">
+                                            </select>
+                                        </div>
+                                    </div>
+
+
+                                </div>
+                                <br />
+                            </div>
                             <input type="hidden" name="Orders.Id" value="@Model.Orders.Id" />
                             <div class="table-responsive table-hover">
                                 <table class="table">
@@ -52,10 +75,11 @@
                                             <tr>
                                                 <td width="10%" class="text-center">
                                                     <div class="checkbox d-inline">
-                                                        <input type="checkbox" class="@(item.IsAlreadyReturned == true ? "" : "productCheck")" @(item.IsAlreadyReturned == true ? "disabled checked" : "")  name="ProductItemDetails[@Model.ProductItemDetails.IndexOf(item)].IsReturnable" id="chk@(Model.ProductItemDetails.IndexOf(item)+1)" value="true">
+                                                        <input type="checkbox" class="@(item.IsAlreadyReturned == true ? "" : "productCheck")" @(item.IsAlreadyReturned == true ? "disabled checked" : "") name="ProductItemDetails[@Model.ProductItemDetails.IndexOf(item)].IsReturnable" id="chk@(Model.ProductItemDetails.IndexOf(item)+1)" value="true">
                                                         <label for="chk@(Model.ProductItemDetails.IndexOf(item)+1)" class="cr"></label>
                                                     </div>
                                                     <input type="hidden" name="ProductItemDetails[@Model.ProductItemDetails.IndexOf(item)].ProductItems.Id" value="@item.ProductItems.Id" />
+                                                    <input type="hidden" name="ProductItemDetails[@Model.ProductItemDetails.IndexOf(item)].Products.Id" value="@item.Products.Id" />
                                                 </td>
                                                 <td>
                                                     <span class="font-12">Product Serial: @item.ProductItems.ItemSerial</span>
@@ -66,7 +90,8 @@
                                                     {
                                                         <span class="badge font-11 badge-soft-warning">Already Returned</span>
                                                     }
-                                                    else { 
+                                                    else
+                                                    {
                                                         <span class="badge font-11 badge-soft-purple">Returnable</span>
                                                     }
                                                 </td>
@@ -89,7 +114,7 @@
                                 </div>
                             </div>
                         </form>
-                  
+
                     }
                 </div>
             </div>
@@ -102,13 +127,33 @@
 @section Scripts{
 
 
-
+    <script src="~/js/searchable-dropdown/bootstrap-select.js"></script>
     <script type="text/javascript">
         var clicked = false;
         $("#checkAll").on("click", function () {
             $(".productCheck").prop("checked", !clicked);
             clicked = !clicked;
             this.innerHTML = clicked ? 'Uncheck All' : 'Check All';
+        });
+        $('#Warehouse_Id').selectpicker('hide');
+        //Use For Dropdown Search
+        $('.selectpicker').selectpicker({
+            liveSearch: true,
+            maxOptions: 1
+        });
+
+        $('#chkWarehouse').on('change', () => {
+            if ($("#chkWarehouse").prop('checked') == true) {
+                $("#Warehouse_Id").val('default').selectpicker("refresh");
+                $('#Warehouse_Id').selectpicker('show');
+            }
+        });
+
+        $('#chkVirtualStorage').on('change', () => {
+            if ($("#chkVirtualStorage").prop('checked') == true) {
+                $("#Warehouse_Id").val('default').selectpicker("refresh");
+                $('#Warehouse_Id').selectpicker('hide');
+            } 
         });
     </script>
 

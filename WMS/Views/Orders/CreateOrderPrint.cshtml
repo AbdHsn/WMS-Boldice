@@ -1,0 +1,166 @@
+﻿@{
+    ViewData["Title"] = "Stock";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    //var productType = (SelectList)ViewBag.ProductType;
+    //var selectedProductTypeName = (string)ViewBag.SelectedProductTypeName;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-30">
+                <div class="card-body pb-0">
+                    <div class="text-center">
+                        <img src="~/ProjectImage/loading.gif" alt="Loading ..." /><br />
+                        <label class="font-weight-bold text-dark">Please wait while print is being processing ...</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts{
+
+    <script src="~/js/pdf-make/pdfmake.min.js"></script>
+    @*<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/pdfmake.min.js"></script>*@
+    <script src="~/js/pdf-make/vfs_fonts.min.js"></script>
+    <script type="text/javascript">
+
+        var serverData;
+        //This arrow function will call after page loaded.
+        $(()=>{
+            serverData = getJsonData("Orders", "GetOrderPrintData", @Model, 'GET');
+            print();
+        });
+
+        function print() {
+
+            //All dynamic data need to be pulled and decorate first
+            var od = [
+                [{ text: 'Particular Details', style: 'subsubheader' }, { text: 'Requested Warehouse', style: 'subsubheader' }, { text: 'Quantity', style: 'subsubheader' }]
+            ];
+            var odWithHeader = od.concat(serverData.orderDetails);
+            var odWithHeaderFooter = odWithHeader.concat([[{ text: 'Total Products: ', colSpan: 2, style: 'subsubheader' }, {}, { text: serverData.totalProduct, style: 'subsubheader' }]]);
+
+            //Assign those dynamic data into printData
+            var printData = {
+                pageSize: 'A4',
+                pageOrientaion: 'portrait',
+                pageMargins: [25, 75, 25, 20],
+                header: {
+                    margin: [25, 5],
+                    table: {
+                        widths: [50, '*', 50],
+                        headerRows: 1,
+                        body: [
+                            [
+                                { image: serverData.logo, width:60},
+                                {
+                                    stack: [{
+                                            margin: [0, 8],
+                                            text: serverData.company.name,
+                                            style: 'header'
+                                        },
+                                        {
+                                            text: serverData.company.address,
+                                            style: 'subsubheader'
+                                        }]
+                                },
+                                { image: serverData.qrCode, width: 55, alignment: 'center'}
+                            ],
+                            ['', '', '']
+                        ]
+                    },
+                    layout: 'headerLineOnly',
+                    unbreakable: true // that's the magic :)
+                },
+                watermark: { text: serverData.company.name, color: 'blue', opacity: 0.1, bold: true, italics: false, angle: -55 },
+                content: [
+                    {
+                        text: 'ORDER DETAILS',
+                        style: 'subheader'
+                    },
+                    {
+                        columns: [
+                            {
+                                stack: [{
+                                    text: 'Order Date: ' + dateFormat(serverData.orders.orderPlaceDate, "dd mmm, yyyy"),
+                                    style: 'normal'
+                                },
+                                {
+                                    text: 'Order No: ' + serverData.orders.orderNo,
+                                    style: 'normal'
+                                }
+                                ]
+
+                            },
+                            {
+                                stack: [{ text: '', alignment: 'right' }]
+                            }
+                        ]
+                    },
+                    {
+                        text: '\n',
+                    },
+                    {
+                        text: 'ORDER ITEM DETAILS',
+                        style: 'subheader'
+                    },
+                    {
+                        table: {
+                            widths: [110, '*', 50],
+                            body: odWithHeaderFooter
+                        },
+                        layout: {
+                            fillColor: function (rowIndex, node, columnIndex) {
+                                return (rowIndex % 2 === 0) ? '#CCCCCC' : null;
+                            }
+                        }
+                    }
+                ],
+                footer: function (currentPage, pageCount) {
+                    return {
+                        margin: [25, 5],
+                        text: 'Page: ' + currentPage.toString() + ' of ' + pageCount,
+                        alignment: 'right',
+                        style: ['small', 'quote']
+                    }
+                },
+                styles: {
+                    header: {
+                        fontSize: 18,
+                        bold: true
+                    },
+                    subheader: {
+                        fontSize: 12,
+                        decoration: 'underline',
+                        bold: true
+                    },
+                    subsubheader: {
+                        fontSize: 12,
+                        bold: true
+                    },
+                    normal: {
+                        fontSize: 12
+                    },
+                    quote: {
+                        italics: true
+                    },
+                    small: {
+                        fontSize: 8
+                    }
+                }
+
+            };
+
+            //pdfMake.createPdf(printData).open(); //Print will open on new tab.
+            //pdfMake.createPdf(printData).download(); //PDF will be downloaded.
+            pdfMake.createPdf(printData).print({}, window); //Print will open on current tab.
+        };
+    </script>
+
+}
+

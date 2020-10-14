@@ -104,7 +104,7 @@ namespace WMS.Controllers
             return View("Stock", result);
         }
 
-        public async Task<IActionResult> StockTrace(int? page, long productId = 0, long warehouseId = 0)
+        public async Task<IActionResult> StockTrace(int? page, long productId = 0, int warehouseId = 0)
         {
             var pageNumber = page ?? 1;
             int pageRowSize = 10;
@@ -136,6 +136,7 @@ namespace WMS.Controllers
 
             var result = products.ToPagedList(pageNumber, pageRowSize);
             ViewData["productId"] = productId;
+            ViewData["warehouseId"] = warehouseId;
 
             return View("StockTrace", result);
         }
