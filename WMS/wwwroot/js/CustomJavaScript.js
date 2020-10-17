@@ -154,6 +154,42 @@ function insertRecordWithoutForm(controller, action, modelObject, icoId, icoClas
     });
 
 }
+function insertRecordWithReturn(controller, action, formId, icoId, icoClass) {
+    var reponseData;
+    if ($('#' + formId).valid()) {
+        var formData = new FormData($('#' + formId)[0]);
+        $.ajax({
+            type: 'POST',
+            data: formData,
+            beforeSend: function () {
+                $('#' + icoId).removeClass(icoClass).addClass('spinner-border spinner-border-sm');
+            },
+            async: false,
+            dataType: 'json',
+            contentType: false,
+            processData: false,
+            url: '/' + controller + '/' + action,
+            success:
+                function (data) {
+                    if (data.success === true) {
+                        reponseData = data.serverData;
+                    }
+                    if (data.success === false) {
+                        swal("Failed to proceed!", data.message, "error");
+                    }
+                },
+            error: function (data) {
+            },
+            complete: function (data) {
+                $('#' + icoId).removeClass('spinner-border spinner-border-sm').addClass(icoClass);
+            }
+        });
+        return reponseData;
+    } else {
+        swal("Failed to Process!", "Form is not valid, Please fill require fields", "error");
+    }
+    
+}
 
 function getJsonData(controller, action, modelObject, httpRequestType) {
     postData = JSON.stringify(modelObject);

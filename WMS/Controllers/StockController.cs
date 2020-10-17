@@ -15,6 +15,7 @@ using WMS.CommonBusinessFunctions;
 using WMS.CommonBusinessFunctions.BusinessModels;
 using WMS.Models.Entities;
 using WMS.Models.PageModels.StockVM;
+using WMS.Models.SharedModels;
 using X.PagedList;
 
 namespace WMS.Controllers
@@ -103,6 +104,63 @@ namespace WMS.Controllers
             var result = stockOfWarehouses.ToPagedList(pageNumber, pageRowSize);
             return View("Stock", result);
         }
+
+        public async Task<IActionResult> VirtualStore(int? page, string status = "")
+        {
+            var pageNumber = page ?? 1;
+            int pageRowSize = 10;
+
+            var getVirtualProduct = new List<ListVirtualSpaceVM>();
+
+            if (string.IsNullOrEmpty(status))
+            {
+               getVirtualProduct = (from vs in _context.VirtualSpace
+                                  join pi in _context.ProductItems on vs.ProductItemId equals pi.Id
+                                  join o in _context.Orders on vs.FromOrderId equals o.Id
+                                  join ord in _context.OrderReturnDetails on vs.ProductItemId equals ord.ProductItemId
+                                  join or in _context.OrderReturn on ord.ReturnId equals or.Id
+                                  join p in _context.Products on pi.ProductId equals p.Id
+                                  select new ListVirtualSpaceVM
+                                  {
+                                      VirtualSpace = vs,
+                                      ProductItems = pi,
+                                      Orders = o,
+                                      OrderReturn = or,
+                                      Products = p
+                                  }).ToList();
+
+            }
+            else
+            {
+                getVirtualProduct = (from vs in _context.VirtualSpace
+                                     where vs.Status == status
+                                     join pi in _context.ProductItems on vs.ProductItemId equals pi.Id
+                                     join o in _context.Orders on vs.FromOrderId equals o.Id
+                                     join ord in _context.OrderReturnDetails on vs.ProductItemId equals ord.ProductItemId
+                                     join or in _context.OrderReturn on ord.ReturnId equals or.Id
+                                     join p in _context.Products on pi.ProductId equals p.Id
+                                     select new ListVirtualSpaceVM
+                                     {
+                                         VirtualSpace = vs,
+                                         ProductItems = pi,
+                                         Orders = o,
+                                         OrderReturn = or,
+                                         Products = p
+                                     }).ToList();
+            }
+
+            var filterValues = new int[] { 8, 9 };
+            ViewData["ddlStatus"] = new SelectList(from StaticValues.ApplicationStatus e in Enum.GetValues(typeof(StaticValues.ApplicationStatus))
+                where filterValues.Contains((int)e)
+                select new { Id = (int)e, Name = e.ToString() }, "Id", "Name");
+
+            ViewData["SelectedStatus"] = string.IsNullOrEmpty(status) ? "All" : status;
+            ViewData["PageNumber"] = pageNumber;
+
+            var result = getVirtualProduct.ToPagedList(pageNumber, pageRowSize);
+            return View(result);
+        }
+
 
         public async Task<IActionResult> StockTrace(int? page, long productId = 0, int warehouseId = 0)
         {

@@ -100,7 +100,7 @@ namespace WMS.Controllers
 
             var filterValues = new int[] { 1, 2, 4, 5 };
             ViewData["ddlOrderStatus"] = new SelectList(
-                from StaticValues.OrderStatus e in Enum.GetValues(typeof(StaticValues.OrderStatus))
+                from StaticValues.ApplicationStatus e in Enum.GetValues(typeof(StaticValues.ApplicationStatus))
                 where filterValues.Contains((int)e)
                 select new { Id = (int)e, Name = e.ToString() }, "Id", "Name");
 
@@ -153,7 +153,7 @@ namespace WMS.Controllers
                         newOrder.GrandTotal = model.ListOrderDetails.Sum(s => s.Total);
                         newOrder.OrderPlaceDate = DateTime.Now;
                         newOrder.CollectionDate = DateTime.UtcNow;
-                        newOrder.OrderStatus = StaticValues.OrderStatus.Submitted.ToString();
+                        newOrder.OrderStatus = StaticValues.ApplicationStatus.Submitted.ToString();
                         _context.Orders.Add(newOrder);
                         _context.SaveChanges();
                         //Importing Order Child record...
@@ -172,7 +172,7 @@ namespace WMS.Controllers
                             }
 
                             item.OrderId = newOrder.Id;
-                            item.ProductStatus = StaticValues.OrderStatus.Submitted.ToString();
+                            item.ProductStatus = StaticValues.ApplicationStatus.Submitted.ToString();
                             // item.CollectionDate = DateTime.Now;
                             _context.OrderDetails.Add(item);
                             _context.SaveChanges();
@@ -236,7 +236,6 @@ namespace WMS.Controllers
                 //QRCode generating 
                 string generateQr = "data:image/" + ".png" + ";base64," + Convert.ToBase64String(_cmnFunction.CreateQrCode(string.Format("Company Name: {0}, OrderNo: {1}", fetchCompany.Name, fetchOrder.OrderNo)));
 
-                var orderDetails = new ArrayList();
                 if (fetchOrder != null)
                 {
                     var fetchOrderDetails = from od in _context.OrderDetails
@@ -277,7 +276,7 @@ namespace WMS.Controllers
 
                 if (or != null)
                 {
-                    var fetchOrderDetail = _context.OrderDetails.Where(od => od.OrderId == or.Id && od.ProductStatus != StaticValues.OrderStatus.Cancelled.ToString()).ToList();
+                    var fetchOrderDetail = _context.OrderDetails.Where(od => od.OrderId == or.Id && od.ProductStatus != StaticValues.ApplicationStatus.Cancelled.ToString()).ToList();
 
                     if (fetchOrderDetail.Count() > 0)
                     {
@@ -333,13 +332,13 @@ namespace WMS.Controllers
                                     });
                                 }
 
-                                item.ProductStatus = StaticValues.OrderStatus.Cancelled.ToString();
+                                item.ProductStatus = StaticValues.ApplicationStatus.Cancelled.ToString();
                                 item.LastUpdate = DateTime.UtcNow;
                                 _context.OrderDetails.Update(item);
                                 _context.SaveChanges();
                             }
 
-                            or.OrderStatus = StaticValues.OrderStatus.Cancelled.ToString();
+                            or.OrderStatus = StaticValues.ApplicationStatus.Cancelled.ToString();
                             or.LastUpdate = DateTime.UtcNow;
                             _context.Orders.Update(or);
                             _context.SaveChanges();
@@ -399,7 +398,7 @@ namespace WMS.Controllers
                                            }).ToListAsync();
                 var filterValues = new int[] { 4, 5 };
                 ViewData["ddlOrderStatus"] = new SelectList(
-                    from StaticValues.OrderStatus e in Enum.GetValues(typeof(StaticValues.OrderStatus))
+                    from StaticValues.ApplicationStatus e in Enum.GetValues(typeof(StaticValues.ApplicationStatus))
                     where filterValues.Contains((int)e)
                     select new { Id = (int)e, Name = e.ToString() }, "Id", "Name");
 
@@ -470,7 +469,6 @@ namespace WMS.Controllers
             {
                 if (ModelState.IsValid)
                 {
-
                     var fetchOrder = await _context.Orders.FindAsync(obj.Id);
                     if (fetchOrder != null)
                     {
@@ -513,7 +511,7 @@ namespace WMS.Controllers
                                 DispatchNo = newDispatchNo,
                                 OrderId = fetchOrder.Id,
                                 DispatchDate = DateTime.UtcNow,
-                                Status = StaticValues.OrderStatus.FullDispatch.ToString()
+                                Status = StaticValues.ApplicationStatus.FullDispatch.ToString()
                             };
                             _context.OrderDispatch.Add(newDispatch);
                             _context.SaveChanges();
@@ -528,7 +526,7 @@ namespace WMS.Controllers
                                         ProductId = item.OrderDetails.ProductId,
                                         ProductItemId = insideItem.ProductItems.Id,
                                         ItemSpaceId = insideItem.ItemSpace.Id,
-                                        ProductStatus = StaticValues.OrderStatus.FullDispatch.ToString()
+                                        ProductStatus = StaticValues.ApplicationStatus.FullDispatch.ToString()
                                     };
                                     _context.OrderDispatchDetails.Add(newDispatchDetail);
                                     _context.SaveChanges();
@@ -543,7 +541,7 @@ namespace WMS.Controllers
                                 }
                                 //Update Old OrderDetail
                                 var updateOrderDetail = item.OrderDetails;
-                                updateOrderDetail.ProductStatus = StaticValues.OrderStatus.FullDispatch.ToString();
+                                updateOrderDetail.ProductStatus = StaticValues.ApplicationStatus.FullDispatch.ToString();
                                 updateOrderDetail.LastUpdate = DateTime.UtcNow;
                                 _context.OrderDetails.Update(updateOrderDetail);
                                 _context.SaveChanges();
@@ -551,15 +549,17 @@ namespace WMS.Controllers
 
                             //Update Old Order
                             var updateOrder = fetchOrder;
-                            updateOrder.OrderStatus = StaticValues.OrderStatus.FullDispatch.ToString();
+                            updateOrder.OrderStatus = StaticValues.ApplicationStatus.FullDispatch.ToString();
                             updateOrder.LastUpdate = DateTime.UtcNow;
                             _context.Orders.Update(updateOrder);
                             _context.SaveChanges();
 
                             transaction.Complete();
+                            return result = Json(new { success = true, message = "Order successfully dispatched.", redirectUrl = @"/Orders/CreateOrderDispatchPrint?dispatchId=" + newDispatch.Id});
                         }
                     }
-                    return result = Json(new { success = true, message = "Order successfully dispatched.", redirectUrl = @"/Orders/Dispatch" });
+                    return result = Json(new { success = false, message = "Failed to fetch order data.", redirectUrl = "" });
+
                 }
                 else
                     return result = Json(new { success = false, message = "Data is not valid.", redirectUrl = "" });
@@ -569,6 +569,71 @@ namespace WMS.Controllers
             {
                 string err = @"Exception occured at Users/Create: " + ex.ToString();
                 return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
+        [HttpGet, ActionName("CreateOrderDispatchPrint")]
+        public IActionResult CreateOrderDispatchPrint(long dispatchId)
+        {
+            return View("CreateOrderDispatchPrint", dispatchId);
+        }
+
+        [Produces("application/json")]
+        [HttpGet, ActionName("GetOrderDispatchPrintData")]
+        public IActionResult GetOrderDispatchPrintData(string jsonData)
+        {
+            try
+            {
+                var result = (dynamic)null;
+                var dispatchId = JsonConvert.DeserializeObject<long>(jsonData);
+
+                var fetchCompany = _context.Company.FirstOrDefault();
+                //Converting logo into base64 string
+                string logoPath = System.IO.Path.Combine(_he.WebRootPath, fetchCompany.SmallLogo);
+                string extension = System.IO.Path.GetExtension(logoPath);
+                string logo = "data:image/" + extension + ";base64," + Convert.ToBase64String(System.IO.File.ReadAllBytes(logoPath));
+
+                var fetchOrderDispatch = _context.OrderDispatch.Find(dispatchId);
+                var fetchOrder = _context.Orders.Find(fetchOrderDispatch.OrderId);
+                //QRCode generating 
+                string generateQr = "data:image/" + ".png" + ";base64," + Convert.ToBase64String(_cmnFunction.CreateQrCode(string.Format("Company Name: {0}, OrderNo: {1}, DispatchNo: {2}", fetchCompany.Name, fetchOrder.OrderNo, fetchOrderDispatch.DispatchNo)));
+
+                if (fetchOrderDispatch != null)
+                {
+                    var fetchOrderDispatchDetails = from odd in _context.OrderDispatchDetails
+                                                    where odd.DispatchId == fetchOrderDispatch.Id
+
+                                                    join pI in _context.ProductItems on odd.ProductItemId equals pI.Id
+                                                    join p in _context.Products on pI.ProductId equals p.Id
+
+                                                    join iS in _context.ItemSpace on odd.ItemSpaceId equals iS.Id
+                                                    join r in _context.Reck on iS.ReckId equals r.Id
+                                                    join w in _context.Warehouse on iS.WarehouseId equals w.Id
+
+                                                    orderby iS.LastUpdate
+
+                                                    select new ArrayList {
+                                                       pI.ItemSerial, p.Name, w.Title+"->"+ r.ReckName+"->"+iS.ReckLevel
+                                                    };
+
+                    result = new PrintVM.CreateOrderDispatchPrintVM()
+                    {
+                        Company = fetchCompany,
+                        Logo = logo,
+                        QRCode = generateQr,
+                        Orders = fetchOrder,
+                        OrderDispatch = fetchOrderDispatch,
+                        OrderDispatchDetails = fetchOrderDispatchDetails.ToList(),
+                        TotalProduct = fetchOrderDispatchDetails.Count()
+                    };
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return BadRequest();
             }
         }
         #endregion
@@ -627,7 +692,7 @@ namespace WMS.Controllers
 
             var filterValues = new int[] { 6, 7 };
             ViewData["ddlOrderStatus"] = new SelectList(
-                from StaticValues.OrderStatus e in Enum.GetValues(typeof(StaticValues.OrderStatus))
+                from StaticValues.ApplicationStatus e in Enum.GetValues(typeof(StaticValues.ApplicationStatus))
                 where filterValues.Contains((int)e)
                 select new { Id = (int)e, Name = e.ToString() }, "Id", "Name");
 
@@ -648,7 +713,7 @@ namespace WMS.Controllers
                 var result = (dynamic)null;
 
                 var getOrder = _context.Orders.Where(o => String.Equals(o.OrderNo, orderNo, StringComparison.CurrentCultureIgnoreCase)).FirstOrDefault();
-                if (getOrder == null || getOrder.OrderStatus == StaticValues.OrderStatus.Cancelled.ToString() || getOrder.OrderStatus == StaticValues.OrderStatus.Submitted.ToString())
+                if (getOrder == null || getOrder.OrderStatus == StaticValues.ApplicationStatus.Cancelled.ToString() || getOrder.OrderStatus == StaticValues.ApplicationStatus.Submitted.ToString())
                 {
                     return View("CreateOrderReturn", result);
                 }
@@ -737,7 +802,7 @@ namespace WMS.Controllers
                                         {
                                             ProductItemId = item.ProductItems.Id,
                                             ProductId = item.Products.Id,
-                                            ProductStatus = StaticValues.OrderStatus.FullReturn.ToString(),
+                                            ProductStatus = StaticValues.ApplicationStatus.FullReturn.ToString(),
                                             ReturnId = newRetun.Id,
                                             LastUpdate = DateTime.UtcNow,
                                         };
@@ -757,7 +822,7 @@ namespace WMS.Controllers
                                     }
 
                                     transaction.Complete();
-                                    return result = Json(new { success = true, message = newRetun.ReturnNo + ": Successfully returned to selected warehouse.", redirectUrl = @"/Orders/OrderReturn" });
+                                    return result = Json(new { success = true, message = newRetun.ReturnNo + ": Successfully returned to virtual store.", redirectUrl = @"/Orders/CreateOrderReturnPrint?returnId="+ newRetun.Id });
                                 }
 
                             }
@@ -806,8 +871,9 @@ namespace WMS.Controllers
                                             {
                                                 ProductItemId = getReturnProducts[i].ProductItems.Id,
                                                 ProductId = getReturnProducts[i].Products.Id,
-                                                ProductStatus = StaticValues.OrderStatus.FullReturn.ToString(),
+                                                ProductStatus = StaticValues.ApplicationStatus.FullReturn.ToString(),
                                                 ReturnId = newRetun.Id,
+                                                ItemSpaceId = isSpaceAvailable[i].Id,
                                                 LastUpdate = DateTime.UtcNow,
                                             };
                                             _context.OrderReturnDetails.Add(newReturnDetail);
@@ -870,7 +936,7 @@ namespace WMS.Controllers
 
 
                                         transaction.Complete();
-                                        return result = Json(new { success = true, message = newRetun.ReturnNo + ": Successfully returned to selected warehouse.", redirectUrl = @"/Orders/OrderReturn" });
+                                        return result = Json(new { success = true, message = newRetun.ReturnNo + ": Successfully returned to selected warehouse.", redirectUrl = @"/Orders/CreateOrderReturnPrint?returnId=" + newRetun.Id });
                                     }
                                 }
                                 else
@@ -883,12 +949,74 @@ namespace WMS.Controllers
                     }
                 }
                 else
-                    return result = Json(new { success = false, message = "Failed to place order.", redirectUrl = "" });
+                    return result = Json(new { success = false, message = "Failed to place return order.", redirectUrl = "" });
             }
             catch (Exception ex)
             {
                 string err = ex.ToString();
                 return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
+        [HttpGet, ActionName("CreateOrderReturnPrint")]
+        public IActionResult CreateOrderReturnPrint(long returnId)
+        {
+            return View("CreateOrderReturnPrint", returnId);
+        }
+
+        [Produces("application/json")]
+        [HttpGet, ActionName("GetOrderReturnPrintData")]
+        public IActionResult GetOrderReturnPrintData(string jsonData)
+        {
+            try
+            {
+                var result = (dynamic)null;
+                var returnId = JsonConvert.DeserializeObject<long>(jsonData);
+
+                var fetchCompany = _context.Company.FirstOrDefault();
+                //Converting logo into base64 string
+                string logoPath = System.IO.Path.Combine(_he.WebRootPath, fetchCompany.SmallLogo);
+                string extension = System.IO.Path.GetExtension(logoPath);
+                string logo = "data:image/" + extension + ";base64," + Convert.ToBase64String(System.IO.File.ReadAllBytes(logoPath));
+
+                var fetchOrderReturn = _context.OrderReturn.Find(returnId);
+                var fetchOrder = _context.Orders.Find(fetchOrderReturn.OrderId);
+                //QRCode generating 
+                string generateQr = "data:image/" + ".png" + ";base64," + Convert.ToBase64String(_cmnFunction.CreateQrCode(string.Format("Company Name: {0}, OrderNo: {1}, ReturnNo: {2}", fetchCompany.Name, fetchOrder.OrderNo, fetchOrderReturn.ReturnNo)));
+
+                if (fetchOrderReturn != null)
+                {
+                    var fetchOrderReturnDetails = from ord in _context.OrderReturnDetails
+                                                  where ord.ReturnId == fetchOrderReturn.Id
+                                                  join pI in _context.ProductItems on ord.ProductItemId equals pI.Id
+                                                  join p in _context.Products on pI.ProductId equals p.Id
+
+                                                  join iS in _context.ItemSpace on ord.ItemSpaceId equals iS.Id
+                                                  join r in _context.Reck on iS.ReckId equals r.Id
+                                                  join w in _context.Warehouse on iS.WarehouseId equals w.Id
+
+                                                  select new ArrayList {
+                                                    p.Name + "\n" + pI.ItemSerial, w.Title+"->"+ r.ReckName+"->"+iS.ReckLevel, 1
+                                                  };
+
+                    result = new PrintVM.CreateOrderReturnPrintVM()
+                    {
+                        Company = fetchCompany,
+                        Logo = logo,
+                        QRCode = generateQr,
+                        Orders = fetchOrder,
+                        OrderReturn = fetchOrderReturn,
+                        OrderReturnDetails = fetchOrderReturnDetails.ToList(),
+                        TotalProduct = fetchOrderReturnDetails.Count()
+                    };
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return BadRequest();
             }
         }
 

@@ -1,5 +1,5 @@
 ﻿@{
-    ViewData["Title"] = "Stock";
+    ViewData["Title"] = "OrderDispatchPrint";
     Layout = "~/Views/Shared/_Layout.cshtml";
 
     //var productType = (SelectList)ViewBag.ProductType;
@@ -31,18 +31,19 @@
         var serverData;
         //This arrow function will call after page loaded.
         $(()=>{
-            serverData = getJsonData("Orders", "GetOrderPrintData", @Model, 'GET');
+            serverData = getJsonData("Orders", "GetOrderDispatchPrintData", @Model, 'GET');
+            console.log(serverData);
             print();
         });
 
         function print() {
 
             //All dynamic data need to be pulled and decorate first
-            var od = [
-                [{ text: 'Particular Details', style: 'subsubheader' }, { text: 'Requested Warehouse', style: 'subsubheader' }, { text: 'Quantity', style: 'subsubheader' }]
+            var odd = [
+                [{ text: 'Item Serial', style: 'subsubheader' }, { text: 'Product Model', style: 'subsubheader' }, { text: 'Pick Point (Warehouse->Reck->Level)', style: 'subsubheader' }]
             ];
-            var odWithHeader = od.concat(serverData.orderDetails);
-            var odWithHeaderFooter = odWithHeader.concat([[{ text: 'Total Products: ', colSpan: 2, style: 'subsubheader' }, {}, { text: serverData.totalProduct, style: 'subsubheader' }]]);
+            var oddWithHeader = odd.concat(serverData.orderDispatchDetails);
+            var oddWithHeaderFooter = oddWithHeader.concat([[{ text: 'Total Items: ', colSpan: 2, style: 'subsubheader' }, {}, { text: serverData.totalProduct, style: 'subsubheader' }]]);
 
             //Assign those dynamic data into printData
             var printData = {
@@ -79,6 +80,32 @@
                 watermark: { text: serverData.company.name, color: 'blue', opacity: 0.1, bold: true, italics: false, angle: -55 },
                 content: [
                     {
+                        text: 'ORDER DISPATCH DETAILS',
+                        style: 'subheader'
+                    },
+                    {
+                        columns: [
+                            {
+                                stack: [{
+                                    text: 'Order Dispatch Date: ' + dateFormat(serverData.orderDispatch.dispatchDate, "dd mmm, yyyy"),
+                                    style: 'normal'
+                                },
+                                {
+                                    text: 'Dispatch No: ' + serverData.orderDispatch.dispatchNo,
+                                    style: 'normal'
+                                }
+                                ]
+
+                            },
+                            {
+                                stack: [{ text: '', alignment: 'right' }]
+                            }
+                        ]
+                    },
+                    {
+                        text: '\n',
+                    },
+                    {
                         text: 'ORDER DETAILS',
                         style: 'subheader'
                     },
@@ -105,13 +132,13 @@
                         text: '\n',
                     },
                     {
-                        text: 'ORDER ITEM DETAILS',
+                        text: 'DISPATCHED ITEM DETAILS',
                         style: 'subheader'
                     },
                     {
                         table: {
-                            widths: [110, '*', 50],
-                            body: odWithHeaderFooter
+                            widths: ['*', 80, '*'],
+                            body: oddWithHeaderFooter
                         },
                         layout: {
                             fillColor: function (rowIndex, node, columnIndex) {

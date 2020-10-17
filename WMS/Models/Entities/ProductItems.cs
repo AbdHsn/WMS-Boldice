@@ -11,5 +11,6 @@ namespace WMS.Models.Entities
         public string PackSerial { get; set; }
         public string ManualSerial { get; set; }
         public DateTime? CreatedDate { get; set; }
+        public string Status { get; set; }
     }
 }

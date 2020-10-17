@@ -100,6 +100,8 @@
                                                     <div><small> SellingPrice: @item.Products.SellingPrice </small> </div>
                                                 </td>
                                                 <td width="20%">
+                                                    <a asp-controller="Products" asp-action="ItemsLocation" asp-route-productId="@item.Products.Id" class="mr-2" data-toggle="tooltip" title="" data-original-title="View All Locations"><i class="fa fa fa-server text-dark font-18"></i></a>
+
                                                     <a href="#" class="mr-2" data-toggle="tooltip" title="" data-original-title="Update Info" onclick='openModalUpdateForm("mdlUpdateForm", "UpdateForm", "Products", "EditProductModel", "?id=@item.Products.Id")'><i class="fa fa-edit text-info font-18"></i></a>
                                                     <a href="#" data-toggle="tooltip" title="" data-original-title="Delete" onclick='deleteConfirmation({id: @item.Products.Id}, "@item.Products.Name", "Products", "DeleteProductModel")'><i class="fa fa-trash text-danger font-18"></i></a>
                                                 </td>

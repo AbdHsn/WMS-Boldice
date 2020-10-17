@@ -35,7 +35,7 @@
                                         @for (int j = 1; j <= item.WarehouseCapacity.Column; j++)
                                         {
                                             <div class="avatar-box thumb-lg align-self-center mr-2">
-                                                <span class="avatar-title bg-soft-purple rounded">
+                                                <span class="avatar-title bg-primary-lighten rounded">
 
                                                     @*@for (int k = 1; k <= item.WarehouseCapacity.ReckQuantity; k++)
                                                     {
@@ -99,7 +99,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title mt-0 font-16" id="myLargeModalLabel">Reck Details</h5>
-                    <button type="button" class="close" onclick='closeModalCreateForm("mdlReckView","reckView")'>
+                    <button type="button" class="close" onclick='closeModalReckView("mdlReckView","reckView")'>
                         <span aria-hidden="true">×</span>
                     </button>
                 </div>
@@ -128,6 +128,10 @@
             $('ul.pagination > li.disabled > a').addClass('page-link');
         });
 
+        function closeModalReckView(modalId, loadDivId) {
+            window.location.reload();
+        }
+
         function addReck(modalId, loadDivId, controller, action, queryString) {
             $('#' + modalId).modal({
                 backdrop: 'static',
@@ -145,6 +149,7 @@
             });
             $('#' + loadDivId).load("/" + controller + "/" + action + queryString);
         }
+
     </script>
 
 }

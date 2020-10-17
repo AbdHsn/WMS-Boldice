@@ -20,6 +20,7 @@ using WMS.Models.PageModels.ProductEntry;
 using WMS.Models.PageModels.ProductVM;
 using WMS.Models.PageModels.ProductVM.ProductEntry;
 using WMS.Models.PageModels.ProductVM.ReckView;
+using WMS.Models.SharedModels;
 using X.PagedList;
 
 namespace POSMVC.Controllers
@@ -140,6 +141,40 @@ namespace POSMVC.Controllers
             return View(result);
         }
 
+        public async Task<IActionResult> ItemsLocation(int? page, long productId = 0)
+        {
+            var pageNumber = page ?? 1;
+            int pageRowSize = 10;
+
+            var items = new List<ItemsLocationVM>();
+            if (productId == 0)
+            {
+                return View(items);
+            }
+
+            var getItems = (from iS in _context.ItemSpace
+                           join pI in _context.ProductItems on iS.ProductItemId equals pI.Id
+                           join p in _context.Products on pI.ProductId equals p.Id
+                           join w in _context.Warehouse on iS.WarehouseId equals w.Id
+                           join r in _context.Reck on iS.ReckId equals r.Id
+                           where pI.ProductId == productId
+                           select new ItemWithDetail
+                           { 
+                              ProductId = p.Id,
+                              ProductName = p.Name,
+                              ItemSerial = pI.ItemSerial,
+                              WarehouseTitle = w.Title,
+                              ReckTitle = r.ReckName,
+                              ReckLevel = (int)iS.ReckLevel
+                           }).GroupBy(g => g.WarehouseTitle).Select(s => new ItemsLocationVM { Warehouse = s.Key,  ItemDetails = s.ToList()});
+
+            var result = getItems.ToPagedList(pageNumber, pageRowSize);
+            ViewData["Product"] = _context.Products.Find(productId);
+
+            return View(result);
+        }
+
+
         [HttpGet, ActionName("CreateProductModel")]
         public async Task<IActionResult> CreateProductModel()
         {
@@ -185,9 +220,10 @@ namespace POSMVC.Controllers
 
         #region ReckView
         [HttpGet, ActionName("ReckView")]
-        public IActionResult ReckView(long warehouseId, int row, int column)
+        public IActionResult ReckView(int warehouseId, int row, int column)
         {
             var result = (dynamic)null;
+            ViewData["WarehouseName"] = _context.Warehouse.Find(warehouseId).Title;
 
             var getRecks = _context.Reck.Where(r => r.SetupRow == row && r.SetupColumn == column && r.WarehouseId == warehouseId);
             if (getRecks == null)
@@ -202,6 +238,7 @@ namespace POSMVC.Controllers
                                    where iS.WarehouseId == warehouseId && iS.ReckId == item.Id
                                    join pI in _context.ProductItems on iS.ProductItemId equals pI.Id into tmpProductItem from pI in tmpProductItem.DefaultIfEmpty()
                                    join p in _context.Products on pI.ProductId  equals p.Id into tmpProduct from p in tmpProduct.DefaultIfEmpty()
+                                  
                                    select new ListOfItem
                                    {
                                        ItemSpace = iS,
@@ -217,9 +254,310 @@ namespace POSMVC.Controllers
 
             return PartialView("ReckView/_ReckView", recks);
         }
+
+        [HttpGet, ActionName("AddSingleProduct")]
+        public IActionResult AddSingleProduct(long ItemSpaceId)
+        {
+            var result = (dynamic)null;
+            var isSpaceAvailable = _context.ItemSpace.Where(i => i.Id == ItemSpaceId && i.ProductItemId == null && i.IsAllocated == false).FirstOrDefault();
+            var reckSetupLocation = _context.Reck.Find(isSpaceAvailable.ReckId);
+
+            if (isSpaceAvailable == null)
+            {
+                return result = Json(new { success = false, message = "Space not available!", redirectUrl = "" });
+            }
+
+            var model = new AddSingleProductItemVM() {
+                ItemSpace = isSpaceAvailable,
+                Warehouse = _context.Warehouse.Find(isSpaceAvailable.WarehouseId),
+                Reck = reckSetupLocation
+            };
+            ViewData["Product"] = new SelectList(_context.Products, "Id", "Name");
+
+            return PartialView("ReckView/_AddSingleProductItem", model);
+        }
+
+        [HttpPost, ActionName("InsertSingleProductItem")]
+        public JsonResult InsertSingleProductItem(AddSingleProductItemVM model)
+        {
+            var result = (dynamic)null;
+            try
+            {
+                if (ModelState.IsValid)
+                {
+                    //Available Space check
+                    var isSpaceAvailable = _context.ItemSpace.Where(w => w.Id == model.ItemSpace.Id && w.WarehouseId == model.WarehouseId && w.IsAllocated == false).ToList();
+                    if (isSpaceAvailable == null || isSpaceAvailable.Count() < model.ProductInsertion.Quantity)
+                    {
+                        var getWarehouseTitle = _context.Warehouse.Where(w => w.Id == model.WarehouseId);
+                        return result = Json(new { success = false, message = "No space available under " + getWarehouseTitle.FirstOrDefault().Title + " for the quantity of " + model.ProductInsertion.Quantity.ToString(), redirectUrl = @"/Products/EntryItems" });
+                    }
+
+                    TransactionOptions options = new TransactionOptions();
+                    options.IsolationLevel = IsolationLevel.Serializable;
+                    options.Timeout = new TimeSpan(0, 10, 0);
+                    using (TransactionScope transaction = new TransactionScope(TransactionScopeOption.Required, options))
+                    {
+                        //Entry No Generate
+                        var getLastEntryNo = _context.ProductInsertion.OrderByDescending(pu => pu.EntryDate).FirstOrDefault();
+                        if (getLastEntryNo != null)
+                        {
+                            int creatEntryNo = Convert.ToInt32(getLastEntryNo.EntryNo.Substring(10)) + 1;
+                            model.ProductInsertion.EntryNo = _cmnBusinessFunction.GenerateNumberWithPrefix("ENT-", creatEntryNo.ToString());
+                        }
+                        else
+                        {
+                            model.ProductInsertion.EntryNo = _cmnBusinessFunction.GenerateNumberWithPrefix("ENT-", 1.ToString());
+                        }
+
+                        //Product Item Insertion
+                        model.ProductInsertion.EntryDate = DateTime.UtcNow;
+                        _context.ProductInsertion.Add(model.ProductInsertion);
+                        _context.SaveChanges();
+
+                        for (int i = 0; i < model.ProductInsertion.Quantity; i++)
+                        {
+                            //Serial No Generate
+                            var getLastSerialOfModel = _context.ProductItems.Where(p => p.ProductId == model.ProductInsertion.ProductId).OrderByDescending(pi => pi.CreatedDate).FirstOrDefault();
+                            int lastSerial = 0;
+                            if (getLastSerialOfModel != null)
+                            {
+                                lastSerial = Convert.ToInt32(getLastSerialOfModel.ItemSerial.Substring(13));
+                            }
+
+                            //Product Item Insertion
+                            var newProductItem = new ProductItems()
+                            {
+                                ProductId = model.ProductInsertion.ProductId,
+                                ItemSerial = model.ProductInsertion.ProductId.ToString().PadLeft(6, '0') + " " + DateTime.Now.ToString("yy") + DateTime.Now.Month.ToString("00") + DateTime.Now.Day.ToString("00") + (lastSerial + 1).ToString().PadLeft(10, '0'),
+                                Status = StaticValues.ApplicationStatus.FreshProduct.ToString(),
+                                CreatedDate = DateTime.UtcNow
+                            };
+                            _context.ProductItems.Add(newProductItem);
+                            _context.SaveChanges();
+
+                            //Update ItemSpace
+                            isSpaceAvailable[i].ProductItemId = newProductItem.Id;
+                            isSpaceAvailable[i].IsAllocated = true;
+                            isSpaceAvailable[i].LastUpdate = DateTime.UtcNow;
+                            isSpaceAvailable[i].ActionedBy = 0;
+                            _context.ItemSpace.Update(isSpaceAvailable[i]);
+                            _context.SaveChanges();
+                        }
+
+                        //Stock Generate only once after loop
+                        var isStockExist = _context.Stock.Where(s => s.ProductId == model.ProductInsertion.ProductId && s.WarehouseId == model.WarehouseId).FirstOrDefault();
+                        if (isStockExist != null)
+                        {
+                            isStockExist.LastQuantity = isStockExist.AvailableQuantity;
+                            isStockExist.AvailableQuantity += model.ProductInsertion.Quantity;
+                            isStockExist.LastUpdate = DateTime.UtcNow;
+
+                            _context.Stock.Update(isStockExist);
+                            _context.SaveChanges();
+
+                            _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                            {
+                                NewQuantity = Convert.ToInt32(model.ProductInsertion.Quantity),
+                                ProductId = Convert.ToInt64(model.ProductInsertion.ProductId),
+                                WarehouseId = Convert.ToInt32(model.WarehouseId),
+                                ReferenecId = model.ProductInsertion.EntryNo,
+                                TableReference = "ProductInsertion",
+                                Note = "Generated From Products/InsertSingleProductItem"
+                            });
+                        }
+                        else
+                        {
+                            var newStock = new Stock()
+                            {
+                                WarehouseId = model.WarehouseId,
+                                ProductId = model.ProductInsertion.ProductId,
+                                AvailableQuantity = model.ProductInsertion.Quantity,
+                                LastQuantity = 0,
+                                CreatedDate = DateTime.UtcNow
+                            };
+                            _context.Stock.Add(newStock);
+                            _context.SaveChanges();
+
+                            _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                            {
+                                NewQuantity = Convert.ToInt32(model.ProductInsertion.Quantity),
+                                WarehouseId = Convert.ToInt32(model.WarehouseId),
+                                ProductId = Convert.ToInt64(model.ProductInsertion.ProductId),
+                                ReferenecId = model.ProductInsertion.EntryNo,
+                                TableReference = "ProductInsertion",
+                                Note = "Generated From Products/InsertSingleProductItem"
+                            });
+                        }
+
+                        transaction.Complete();
+                        return result = Json(new { success = true, serverData = "Data saved successfully." });
+                    }
+
+                }
+                else
+                    return result = Json(new { success = false, message = "Form is not valid.", redirectUrl = "" });
+
+            }
+            catch (Exception ex)
+            {
+                string err = @"Exception occured at Products/InsertProductItem: " + ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
         #endregion
 
         //#region PurchaseItems PostMethods
+
+        [HttpGet, ActionName("ProductBackToStock")]
+        public async Task<IActionResult> ProductBackToStock(long virtualSpaceId)
+        {
+            var model = new ProductBackToStockVM(){ 
+                VirtualSpaceId = virtualSpaceId
+            };
+
+            ViewData["Warehouse"] = new SelectList(await _context.Warehouse.ToListAsync(), "Id", "Title");
+            return PartialView("_ProductBackToStock", model);
+        }
+
+        [HttpPost, ActionName("ProductBackToStock")]
+        public JsonResult ProductBackToStock(ProductBackToStockVM model)
+        {
+            var result = (dynamic)null;
+            try
+            {
+                if (model.WarehouseId > 0)
+                {
+                    //Available Space check
+                    var isSpaceAvailable = _context.ItemSpace.Where(w => w.WarehouseId == model.WarehouseId && w.IsAllocated == false).ToList();
+                    if (isSpaceAvailable == null || isSpaceAvailable.Count() <= 0)
+                    {
+                        var getWarehouseTitle = _context.Warehouse.Where(w => w.Id == model.WarehouseId);
+                        return result = Json(new { success = false, message = "No space available under " + getWarehouseTitle.FirstOrDefault().Title, redirectUrl = "" });
+                    }
+
+                    var isVirtualProductAvailable = _context.VirtualSpace.Find(model.VirtualSpaceId);       
+                    if (isVirtualProductAvailable == null)
+                    {
+                        return result = Json(new { success = false, message = "Virtual Store record is not found!", redirectUrl = "" });
+                    }
+
+                    var productItem = _context.ProductItems.Find(isVirtualProductAvailable.ProductItemId);
+                    if (productItem == null)
+                    {
+                        return result = Json(new { success = false, message = "Product item is not found!", redirectUrl = "" });
+                    }
+
+                    TransactionOptions options = new TransactionOptions();
+                    options.IsolationLevel = IsolationLevel.Serializable;
+                    options.Timeout = new TimeSpan(0, 10, 0);
+                    using (TransactionScope transaction = new TransactionScope(TransactionScopeOption.Required, options))
+                    {
+                        //Update Virtual Space record
+                        productItem.Status = StaticValues.ApplicationStatus.ReturnProduct.ToString();
+                        _context.ProductItems.Update(productItem);
+                        _context.SaveChanges();
+                        
+                        //Update Product Item record
+                        isVirtualProductAvailable.Status = StaticValues.ApplicationStatus.StockRetrived.ToString();
+                        _context.VirtualSpace.Update(isVirtualProductAvailable);
+                        _context.SaveChanges();
+
+                        //Update ItemSpace
+                        isSpaceAvailable[0].ProductItemId = productItem.Id;
+                            isSpaceAvailable[0].IsAllocated = true;
+                            isSpaceAvailable[0].LastUpdate = DateTime.UtcNow;
+                            isSpaceAvailable[0].ActionedBy = 0;
+                            _context.ItemSpace.Update(isSpaceAvailable[0]);
+                            _context.SaveChanges();
+
+                            //Stock Generate one by one while loop is running
+                            var isStockExist = _context.Stock.Where(s => s.ProductId == productItem.ProductId && s.WarehouseId == model.WarehouseId).FirstOrDefault();
+                            if (isStockExist != null)
+                            {
+                                isStockExist.LastQuantity = isStockExist.AvailableQuantity;
+                                isStockExist.AvailableQuantity += 1;
+                                isStockExist.LastUpdate = DateTime.UtcNow;
+
+                                _context.Stock.Update(isStockExist);
+                                _context.SaveChanges();
+
+                                _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                                {
+                                    NewQuantity = 1,
+                                    ProductId = (long)productItem.ProductId,
+                                    WarehouseId = model.WarehouseId,
+                                    ReferenecId = model.VirtualSpaceId.ToString(),
+                                    TableReference = "VirtualSpace",
+                                    Note = "Generated From Products/ProductBackToStock"
+                                });
+                            }
+                            else
+                            {
+                                var newStock = new Stock()
+                                {
+                                    WarehouseId = model.WarehouseId,
+                                    ProductId = (long)productItem.ProductId,
+                                    AvailableQuantity = 1,
+                                    LastQuantity = 0,
+                                    CreatedDate = DateTime.UtcNow
+                                };
+                                _context.Stock.Add(newStock);
+                                _context.SaveChanges();
+
+                                _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                                {
+                                    NewQuantity = 1,
+                                    WarehouseId = model.WarehouseId,
+                                    ProductId = (long)productItem.ProductId,
+                                    ReferenecId = model.VirtualSpaceId.ToString(),
+                                    TableReference = "VirtualSpace",
+                                    Note = "Generated From Products/ProductBackToStock"
+                                });
+                            }
+
+                        transaction.Complete();
+                        return result = Json(new { success = true, message = "Product item successfully retrived to selected warehouse.", redirectUrl = @"/Stock/VirtualStore"});
+                    }
+                }
+
+                return result = Json(new { success = false, message = "Please select warehouse where to retrive product item.", redirectUrl = "" });
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
+
+
+        [HttpPost, ActionName("MakeItDamage")]
+        public JsonResult MakeItDamage(VirtualSpace model)
+        {
+            var result = (dynamic)null;
+            try
+            {
+                var fetchVS = _context.VirtualSpace.Find(model.Id);
+                if (fetchVS != null)
+                {
+                    fetchVS.Status = StaticValues.ApplicationStatus.Damage.ToString();
+                    _context.VirtualSpace.Update(fetchVS);
+                    _context.SaveChanges();
+
+                    return result = Json(new { success = true, message = "Product Item is damaged.", redirectUrl = @"/Stock/VirtualStore" });
+                }
+                else
+                    return result = Json(new { success = false, message = " Record is not found.", redirectUrl = "" });
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
 
         [HttpPost, ActionName("InsertProductItem")]
         public async Task<JsonResult> InsertProductItem(InsertProductItemVM model)
@@ -274,6 +612,7 @@ namespace POSMVC.Controllers
                             {
                                 ProductId = model.ProductInsertion.ProductId,
                                 ItemSerial = model.ProductInsertion.ProductId.ToString().PadLeft(6, '0') + " " + DateTime.Now.ToString("yy") + DateTime.Now.Month.ToString("00") + DateTime.Now.Day.ToString("00") + (lastSerial + 1).ToString().PadLeft(10, '0'),
+                                Status = StaticValues.ApplicationStatus.FreshProduct.ToString(),
                                 CreatedDate = DateTime.UtcNow
                             };
                             _context.ProductItems.Add(newProductItem);

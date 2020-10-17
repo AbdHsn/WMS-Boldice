@@ -1,9 +1,15 @@
 ﻿@model IEnumerable<WMS.Models.PageModels.ProductVM.ReckView.ReckViewVM>
 
+@{
+    var warehouseName = (string)ViewBag.WarehouseName;
+}
 
 
+<h5 class="text-center text-info">Warehouse: @warehouseName</h5>
 <div class="h-100">
     <div class="d-flex align-items-center justify-content-center h-100">
+
+
 
         @if (Model.Count() <= 0)
         {
@@ -13,6 +19,7 @@
         {
             @foreach (var item in Model)
             {
+
                 <table class="table-bordered table-hover m-2">
                     @foreach (var innerItem in item.ListOfItems)
                     {
@@ -27,8 +34,10 @@
                                 }
                                 else
                                 {
-                                    <b class="m-5">Empty</b>
+                                    <b class="m-5">
+                                        Empty  <a href="#" onclick='addSingleProduct("mdlAddSingleItem", "addSingleItem", "Products","AddSingleProduct", "?ItemSpaceId=@innerItem.ItemSpace.Id")' class="badge badge-soft-purple">Assign Product</a>
 
+                                    </b>
                                 }
                             </td>
 
@@ -44,3 +53,38 @@
 
     </div>
 </div>
+
+
+<div class="modal fade" id="mdlAddSingleItem" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-modal="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title mt-0 font-16" id="myLargeModalLabel">Add Product Item</h5>
+                <button type="button" class="close" onclick='closeModalCreateForm("mdlAddSingleItem","addSingleItem")'>
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="addSingleItem">
+                    <div class="text-center">
+                        <img src="~/ProjectImage/loading.gif" alt="Loading ..." />
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script type="text/javascript">
+    function addSingleProduct(modalId, loadDivId, controller, action, queryString) {
+        $('#' + modalId).modal({
+            backdrop: 'static',
+            keyboard: false,
+            show: true
+        });
+        $('#' + loadDivId).load("/" + controller + "/" + action + queryString);
+    }
+
+</script>

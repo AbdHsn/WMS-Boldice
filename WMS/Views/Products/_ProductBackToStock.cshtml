@@ -1,0 +1,41 @@
+﻿@model WMS.Models.PageModels.ProductVM.ProductBackToStockVM
+<div class="col-md-12">
+    <form enctype="multipart/form-data" id="frmCreateForm">
+
+        <label class="text-warning text-center">Please confirm warehouse selection before retrive to stock. </label>
+
+        <div class="row">
+            <div class="col-md-12 col-sm-12">
+                <div class="form-group">
+                    <label class="control-label">Warehouse</label>
+                    <select asp-for="WarehouseId" class="form-control" asp-items="ViewBag.Warehouse">
+                        <option disabled selected value="" class="">Select Warehouse</option>
+                    </select>
+                    <span asp-validation-for="WarehouseId" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+        <input type="hidden" name="VirtualSpaceId" value="@Model.VirtualSpaceId" />
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group right-align">
+                    <br />
+                    <br />
+                    <hr />
+                    <button type="button" class="btn btn-sm btn-outline-success" style="width:150px" onclick='insertRecord("Products", "ProductBackToStock", "frmCreateForm")'> <i class="zmdi zmdi-save"></i> Save</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" style="width:150px" onclick='closeModalCreateForm("mdlCreateForm","CreateForm")'><i class="zmdi zmdi-close"></i> Cancel</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script src="~/js/searchable-dropdown/bootstrap-select.js"></script>
+<script type="text/javascript">
+
+    $('#ProductId').selectpicker({
+        liveSearch: true,
+        maxOptions: 1
+    });
+
+</script>

@@ -24,7 +24,7 @@ namespace WMS.Models.SharedModels
 {
     public class StaticValues
     {
-        public enum OrderStatus
+        public enum ApplicationStatus
         {
             Submitted = 1,
             Cancelled,
@@ -36,7 +36,12 @@ namespace WMS.Models.SharedModels
             [Display(Name = "Full Return")]
             FullReturn,
             [Display(Name = "Partial Return")]
-            PartialReturn
+            PartialReturn,
+            VirtualStored,
+            StockRetrived,
+            Damage,
+            FreshProduct,
+            ReturnProduct
         }
     }
 }

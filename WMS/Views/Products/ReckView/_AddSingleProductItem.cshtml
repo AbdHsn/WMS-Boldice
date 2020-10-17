@@ -1,0 +1,62 @@
+﻿@model WMS.Models.PageModels.ProductVM.ProductEntry.AddSingleProductItemVM
+
+<div class="col-md-12">
+    <form enctype="multipart/form-data" id="frmCreateForm">
+        <input type="hidden" asp-for="WarehouseId" value="@Model.Warehouse.Id" class="form-control" />
+        <input type="hidden" asp-for="ProductInsertion.Quantity" value="1" class="form-control" />
+        <input type="hidden" asp-for="ItemSpace.Id" value="@Model.ItemSpace.Id" class="form-control" />
+
+        <div class="row">
+            <div class="col-md-12 col-sm-12">
+                <div class="form-group">
+                    <label asp-for="ProductInsertion.ProductId" class="control-label">Select Product Model</label>
+                    <select asp-for="ProductInsertion.ProductId" id="ProductId" class="selectpicker show-tick show-menu-arrow form-control" data-size="10" title="Select Product" asp-items="ViewBag.Product" data-live-search="true">
+                    </select>
+                    <span asp-validation-for="ProductInsertion.ProductId" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 col-sm-12">
+                <div class="form-group">
+                    <label asp-for="ProductInsertion.Note" class="control-label">Note</label>
+                    <textarea class="form-control" asp-for="ProductInsertion.Note" rows="3">
+                    </textarea>
+                    <span asp-validation-for="ProductInsertion.Note" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group right-align">
+                    <br />
+                    <br />
+                    <hr />
+                    <button type="button" id="btnAddSingleProductItem" class="btn btn-sm btn-outline-success" style="width:150px"> <i id="icoPlaceOrder" class="zmdi zmdi-save">  </i> Save</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" style="width:150px" onclick='closeModalCreateForm("mdlAddSingleItem", "addSingleItem")'><i class="zmdi zmdi-close"></i> Cancel</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script src="~/js/searchable-dropdown/bootstrap-select.js"></script>
+<script type="text/javascript">
+
+    $('#ProductId').selectpicker({
+        liveSearch: true,
+        maxOptions: 1
+    });
+
+    $('#btnAddSingleProductItem').on('click', () => {
+        var serverData = insertRecordWithReturn("Products", "InsertSingleProductItem", "frmCreateForm", "icoPlaceOrder", "zmdi zmdi-save");
+        if (typeof serverData !== 'undefined')
+        {
+              viewReck("mdlReckView", "reckView", "Products", "ReckView", "?warehouseId=@Model.Warehouse.Id&row=@Model.Reck.SetupRow&column=@Model.Reck.SetupColumn");
+        }
+     
+    });
+
+</script>

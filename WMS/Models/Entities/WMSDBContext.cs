@@ -373,6 +373,8 @@ namespace WMS.Models.Entities
                 entity.Property(e => e.ManualSerial).HasMaxLength(40);
 
                 entity.Property(e => e.PackSerial).HasMaxLength(40);
+
+                entity.Property(e => e.Status).HasMaxLength(15);
             });
 
             modelBuilder.Entity<ProductType>(entity =>
