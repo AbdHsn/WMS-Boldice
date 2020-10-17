@@ -814,7 +814,7 @@ namespace WMS.Controllers
                                         {
                                             ProductItemId = item.ProductItems.Id,
                                             FromOrderId = model.Orders.Id,
-                                            Status = "Stored",
+                                            Status = StaticValues.ApplicationStatus.VirtualStored.ToString(),
                                             InsertedDate = DateTime.UtcNow
                                         };
                                         _context.VirtualSpace.Add(newVStore);
@@ -984,20 +984,35 @@ namespace WMS.Controllers
                 //QRCode generating 
                 string generateQr = "data:image/" + ".png" + ";base64," + Convert.ToBase64String(_cmnFunction.CreateQrCode(string.Format("Company Name: {0}, OrderNo: {1}, ReturnNo: {2}", fetchCompany.Name, fetchOrder.OrderNo, fetchOrderReturn.ReturnNo)));
 
+                var fetchOrderReturnDetails = (dynamic)null;
                 if (fetchOrderReturn != null)
                 {
-                    var fetchOrderReturnDetails = from ord in _context.OrderReturnDetails
-                                                  where ord.ReturnId == fetchOrderReturn.Id
-                                                  join pI in _context.ProductItems on ord.ProductItemId equals pI.Id
-                                                  join p in _context.Products on pI.ProductId equals p.Id
+                    var fetchORD = _context.OrderReturnDetails.Where(ord => ord.ReturnId == fetchOrderReturn.Id);
+                    if (fetchORD != null)
+                    {
+                        if (fetchORD.FirstOrDefault().ItemSpaceId == null)
+                        {
+                            fetchOrderReturnDetails = (from ord in fetchORD
+                                                      join pI in _context.ProductItems on ord.ProductItemId equals pI.Id
+                                                      join p in _context.Products on pI.ProductId equals p.Id
+                                                      select new ArrayList {
+                                                                p.Name + "\n" + pI.ItemSerial, "Stored into virtual store.", 1
+                                                            }).ToList();
+                        }
+                        else {
+                            fetchOrderReturnDetails = (from ord in fetchORD
+                                                      join pI in _context.ProductItems on ord.ProductItemId equals pI.Id
+                                                      join p in _context.Products on pI.ProductId equals p.Id
 
-                                                  join iS in _context.ItemSpace on ord.ItemSpaceId equals iS.Id
-                                                  join r in _context.Reck on iS.ReckId equals r.Id
-                                                  join w in _context.Warehouse on iS.WarehouseId equals w.Id
+                                                      join iS in _context.ItemSpace on ord.ItemSpaceId equals iS.Id
+                                                      join r in _context.Reck on iS.ReckId equals r.Id
+                                                      join w in _context.Warehouse on iS.WarehouseId equals w.Id
 
-                                                  select new ArrayList {
-                                                    p.Name + "\n" + pI.ItemSerial, w.Title+"->"+ r.ReckName+"->"+iS.ReckLevel, 1
-                                                  };
+                                                      select new ArrayList {
+                                                                p.Name + "\n" + pI.ItemSerial, w.Title+"-> "+r.ReckName+"-> "+iS.ReckLevel, 1
+                                                            }).ToList();
+                        }
+                    }
 
                     result = new PrintVM.CreateOrderReturnPrintVM()
                     {
@@ -1006,8 +1021,8 @@ namespace WMS.Controllers
                         QRCode = generateQr,
                         Orders = fetchOrder,
                         OrderReturn = fetchOrderReturn,
-                        OrderReturnDetails = fetchOrderReturnDetails.ToList(),
-                        TotalProduct = fetchOrderReturnDetails.Count()
+                        OrderReturnDetails = fetchOrderReturnDetails,
+                        TotalProduct = fetchOrderReturnDetails.Count
                     };
                 }
 
