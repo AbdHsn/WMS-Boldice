@@ -408,6 +408,114 @@ namespace POSMVC.Controllers
 
         #endregion
 
+        #region ProductType
+        public async Task<IActionResult> ProductTypes(int? page)
+        {
+            var pageNumber = page ?? 1;
+            int pageRowSize = 10;
+
+            var pt = await _context.ProductType.ToListAsync();
+            var result = pt.ToPagedList(pageNumber, pageRowSize);
+
+            return View("ProductTypes/ProductTypes", result);
+        }
+
+        [HttpGet, ActionName("CreateProductType")]
+        public async Task<IActionResult> CreateProductTypes()
+        {
+            return PartialView("ProductTypes/_CreateProductType");
+        }
+
+
+        [HttpPost, ActionName("CreateProductType")]
+        public async Task<JsonResult> CreateProductType(ProductType obj)
+        {
+            var result = (dynamic)null;
+            try
+            {
+                if (ModelState.IsValid)
+                {
+                    _context.ProductType.Add(obj);
+                    await _context.SaveChangesAsync();
+                    return result = Json(new { success = true, message = "ProductType successfully created.", redirectUrl = @"/Products/ProductTypes" });
+                }
+                else
+                    return result = Json(new { success = false, message = "Data is not valid.", redirectUrl = "" });
+
+            }
+            catch (Exception ex)
+            {
+                string err = @"Exception occured at Users/Create: " + ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
+        [HttpGet, ActionName("EditProductType")]
+        public async Task<IActionResult> EditProductTypes(int? id)
+        {
+            if (id != 0)
+            {
+                var pt = await _context.ProductType.FindAsync(id);
+                return PartialView("ProductTypes/_UpdateProductType", pt);
+            }
+            else
+            {
+                return PartialView("ProductTypes/_UpdateProductType", new Warehouse());
+            }
+        }
+        [HttpPost, ActionName("EditProductType")]
+        public async Task<JsonResult> EditProductType(ProductType obj)
+        {
+            var result = (dynamic)null;
+
+            try
+            {
+                if (obj.Id <= 0)
+                {
+                    return result = Json(new { success = false, message = " Record is not found", redirectUrl = @"/Products/ProductTypes" });
+                }
+
+                obj.TypeName = obj.TypeName;
+                _context.Entry(obj).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+
+                return result = Json(new { success = true, message = "Record successfully updated", redirectUrl = @"/Products/ProductTypes" });
+            }
+            catch (Exception ex)
+            {
+                string err = @"Exception occured at Products/EditProductType " + ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
+        [HttpPost, ActionName("DeleteProductType")]
+        public async Task<JsonResult> DeleteProductType(ProductType model)
+        {
+            var result = (dynamic)null;
+            try
+            {
+                var pt = await _context.ProductType.FindAsync(model.Id);
+
+                if (pt != null)
+                {
+                    _context.ProductType.Remove(pt);
+                    await _context.SaveChangesAsync();
+
+                    return result = Json(new { success = true, message = " Record successfully deleted.", redirectUrl = @"/Products/ProductTypes" });
+                }
+                else
+                    return result = Json(new { success = false, message = " Record is not found.", redirectUrl = "" });
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
+        #endregion
+
+
         //#region PurchaseItems PostMethods
 
         [HttpGet, ActionName("ProductBackToStock")]
