@@ -22,6 +22,7 @@
         <!-- #endregion -->
 
     </environment>
+
     <environment exclude="Development">
         <!-- #region Templete CSS -->
         <link href="~/style.css" rel="stylesheet" />
@@ -34,6 +35,7 @@
         <link href="~/css/CustomStyle.css" rel="stylesheet" />
         <!-- #endregion -->
     </environment>
+
     @RenderSection("Css", required: false)
 </head>
 <body>
@@ -45,8 +47,7 @@
         <div class="ecaps-sidemenu-area">
             <!-- Desktop Logo -->
             <div class="ecaps-logo">
-                <a asp-controller="Home" asp-action="Index">
-                    <h3 class="text-center">WMS</h3>
+                <a asp-controller="Home" asp-action="Index"><img src="/img/core-img/small-logo.png" alt="Logo">
                 </a>
             </div>
 
@@ -356,14 +357,16 @@
         <script src="~/js/bundle.js"></script>
         <script src="~/js/default-assets/setting.js"></script>
         <script src="~/js/default-assets/fullscreen.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js"></script>
+
 
         <!-- Active JS -->
         <script src="~/js/default-assets/active.js"></script>
 
         <!-- These plugins only need for the run this page -->
-        <script src="~/js/default-assets/apexchart.min.js"></script>
-        <script src="~/js/default-assets/dashboard-active.js"></script>
 
+        <script src="~/js/default-assets/dashboard-active.js"></script>
+        <script src="~/js/default-assets/apexchart.min.js"></script>
         <!-- #endregion -->
         <!-- #region Validation Js -->
         <script src="~/js/jquery-validate/jquery.validate.js"></script>

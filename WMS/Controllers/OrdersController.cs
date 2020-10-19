@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.EntityFrameworkCore.SqlServer.Query.ExpressionTranslators.Internal;
 using Newtonsoft.Json;
 using WMS.CommonBusinessFunctions;
 using WMS.CommonBusinessFunctions.BusinessModels;
@@ -359,6 +361,68 @@ namespace WMS.Controllers
             {
                 string err = ex.ToString();
                 return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
+        [Produces("application/json")]
+        [HttpGet, ActionName("GetOrdersAndReturnsChart")]
+        public IActionResult GetOrdersAndReturnsChart()
+        {
+            try
+            {
+                var result = (dynamic)null;
+                int[] month = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+                var fetchOrderDetails = (from od in _context.OrderDetails
+                                        join o in _context.Orders on od.OrderId equals o.Id
+                                        where o.OrderStatus == StaticValues.ApplicationStatus.FullDispatch.ToString()
+                                        orderby o.OrderPlaceDate.Value.Month
+                                        select new { 
+                                            od, o
+                                        }).GroupBy(g => g.o.OrderPlaceDate.Value.Month).Select(s => new { Month = s.Key, SoldItems = s.Count()});
+                
+                var fetchReturnDetails = (from ord in _context.OrderReturnDetails
+                                        join or in _context.OrderReturn on ord.ReturnId equals or.Id
+                                        orderby or.ReturnDate.Value.Month
+                                        select new { 
+                                            ord, or
+                                        }).GroupBy(g => g.or.ReturnDate.Value.Month).Select(s => new { Month = s.Key, ReturnItems = s.Count()});
+
+                var list = new List<OrdersReturnsChartVM>();
+
+                var model01 = new OrdersReturnsChartVM();
+                model01.Label = "Orders";
+                model01.BorderColor = "green";
+                model01.BackgroundColor = "rgb(47, 161, 196)";
+                model01.Data = (from m in month
+                               join od in fetchOrderDetails on m equals od.Month into results
+                               from r in results.DefaultIfEmpty()
+                               select new { 
+                                    value = r == null ? 0 : r.SoldItems
+                               }).Select(s => s.value).ToList();
+
+                list.Add(model01);
+
+                var model02 = new OrdersReturnsChartVM();
+                model02.Label = "Returns";
+                model02.BorderColor = "red";
+                model02.BackgroundColor = "rgb(244, 207, 139)";
+                model02.Data = (from m in month
+                                join rd in fetchReturnDetails on m equals rd.Month into results
+                                from r in results.DefaultIfEmpty()
+                                select new
+                                {
+                                    value = r == null ? 0 : r.ReturnItems
+                                }).Select(s => s.value).ToList();
+                list.Add(model02);
+
+                result = list;
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return BadRequest();
             }
         }
         #endregion
