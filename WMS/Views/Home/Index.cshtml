@@ -1,78 +1,100 @@
-﻿@{
+﻿@model WMS.Models.PageModels.HomeVM.HomeVM
+
+@{
     ViewData["Title"] = "Home Page";
 }
 
-
-@*<div class="container-fluid">
-        <div class="row justify-content-center">
-            <div class="col-xl-12 box-margin">
-                <div class="card">
-                    <div class="card-body" style="height:500px">
-                        <br />
-                        <br />
-                        <br />
-                        <br />
-                        <br />
-                        <br />
-                        <br />
-                        <br />
-                        <br />
-                        <br />
-                        <h2 class="text-center"> Welcome to Multi Warehose Management System</h2>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>*@
 
 <!-- Main Content Area -->
 <div class="main-content">
     <div class="container-fluid">
         <div class="row justify-content-center">
-            <div class="col-md-6 col-xl-4">
-                <div class="card box-margin">
-                    <div class="card-body">
-                        <div class="float-right"><i class="fa fa-id-badge text-primary font-30"></i></div><span class="badge badge-primary">Sessions</span>
-                        <h4 class="my-3">226k</h4>
-                        <p class="mb-0"><span class="text-success"><i class="fa fa-level-up mr-1" aria-hidden="true"></i>7.5%</span>New Sessions Today</p>
-                    </div>
-                    <!--end card-body-->
-                </div>
-                <!--end card-->
-            </div>
+
             <!--end col-->
-            <div class="col-md-6 col-xl-4">
-                <div class="card box-margin">
-                    <div class="card-body">
-                        <div class="float-right"><i class="fa fa-bar-chart-o font-30"></i></div><span class="badge badge-secondary">Avg.Sessions</span>
-                        <h4 class="my-3">00:28</h4>
-                        <p class="mb-0"><span class="text-danger"><i class="fa fa-level-down mr-1" aria-hidden="true"></i>1.4%</span> Weekly Avg.Sessions</p>
-                    </div>
-                    <!--end card-body-->
-                </div>
-                <!--end card-->
-            </div>
-            <!--end col-->
-            <div class="col-xl-4">
-                <div class="card box-margin">
-                    <div class="card-body">
-                        <div class="float-right"><i class="fa fa-codiepie text-warning font-30"></i></div><span class="badge badge-warning">Bounce Rate</span>
-                        <h4 class="my-3">$2500</h4>
-                        <p class="mb-0"><span class="text-danger"><i class="fa fa-level-down mr-1" aria-hidden="true"></i>45%</span> Bounce Rate Weekly</p>
+            <div class="col-md-6 col-xl-6">
+                <div class="card box-margin" style="height: 120px">
+                    <div class="card-body" style="padding:0px">
+                        <div class="col-md-12" style="padding-top:10px">
+                            <div class="row">
+                                <div class="col-md-10">
+                                    <label class="label col-form-label-sm">ORDERS ARE PENDING TO TAKE ACTION</label>
+                                </div>
+                                <div class="col-md-2">
+                                    <i class="fa fa-shopping-basket text-warning font-15 pull-right"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12">
+                            @if (Model.CountOfOrderActionNeed < 2)
+                            {
+                                <h4 class="text-primary" style="padding-left:5px">@Model.CountOfOrderActionNeed order is waiting ... </h4>
+
+                            }
+                            else
+                            {
+                                <h4 class="text-primary" style="padding-left:5px">@Model.CountOfOrderActionNeed orders are waiting ... </h4>
+
+                            }
+                        </div>
+                        <div class="col-md-12">
+                            <a asp-action="orders" asp-controller="Orders" asp-route-orderStatus="Submitted" class="btn btn-outline-primary pull-right" style="height: 25px; width:100px; text-align:center; padding:0px"> See Orders </a>
+                        </div>
                     </div>
                     <!--end card-body-->
                 </div>
                 <!--end card-->
             </div>
 
-            <div class="col-xl-12 box-margin height-card">
+
+
+            <div class="col-md-6 col-xl-6">
+                <div class="card box-margin" style="height: 120px">
+                    <div class="card-body" style="padding:0px">
+                        <div class="col-md-12" style="padding-top:10px">
+                            <div class="row">
+                                <div class="col-md-10">
+                                    <label class="label col-form-label-sm">DATE AND TIME OF THE DAY</label>
+                                </div>
+                                <div class="col-md-2">
+                                    <i class="fa fa-clock-o text-warning font-15 pull-right"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12">
+
+                            <h4 class="text-primary CurrentClock" style="padding-left:5px"></h4>
+                        </div>
+                    </div>
+                    <!--end card-body-->
+                </div>
+                <!--end card-->
+            </div>
+
+
+
+
+
+            <div class="col-xl-6 box-margin height-card">
                 <div class="card">
                     <div class="card-body">
                         @*<h4 class="card-title">Sales of Warehouses</h4>*@
                         <!--  Chart -->
                         <div class="dashboard-area">
                             <canvas id="chartOfOrdersAndReturns"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-6 box-margin height-card">
+                <div class="card">
+                    <div class="card-body">
+                        @*<h4 class="card-title">Sales of Warehouses</h4>*@
+                        <!--  Chart -->
+                        <div class="dashboard-area">
+                            <canvas id="chartOfOrdersAndReturn"></canvas>
                         </div>
                     </div>
                 </div>
@@ -615,7 +637,7 @@
     <script type="text/javascript">
 
         //This arrow function will call after page loaded.
-        $(()=>{
+        $(() => {
             var fetchSalesAndReturnChart = getJsonData("Orders", "GetOrdersAndReturnsChart", null, 'GET');
             salesAndReturnChart(fetchSalesAndReturnChart);
         });
@@ -656,6 +678,28 @@
                     }
                 }
             });
+        }
+
+        //For showing 12 clock
+        var interval = setInterval(_12Clock, 1000);
+        function _12Clock() {
+            var currentTime = new Date();
+            const month = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+            var hours = currentTime.getHours();
+            var minutes = currentTime.getMinutes();
+            var seconds = currentTime.getSeconds();
+            var date = currentTime.getDate();
+            var year = currentTime.getFullYear();
+            var ampm = hours >= 12 ? 'pm' : 'am';
+
+            hours = hours % 12;
+            hours = hours ? hours : 12; // the hour '0' should be '12'
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            seconds = (seconds < 10 ? "0" : "") + seconds;
+
+            var strTime = date + " " + month[currentTime.getMonth()] + " " + year + ", " + hours + ':' + minutes + ':' + seconds + ' ' + ampm;
+            $(".CurrentClock").html(strTime);
         }
 
     </script>

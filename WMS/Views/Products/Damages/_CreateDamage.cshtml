@@ -1,0 +1,87 @@
+﻿@model WMS.Models.PageModels.ProductVM.DamageVM.CreateDamageVM
+
+<div class="col-md-12">
+    <form enctype="multipart/form-data" id="frmCreateForm">
+        <div class="row">
+            <div class="col-md-12 col-sm-12">
+                <div class="form-group">
+                    <label class="control-label">Choose Warehouse*</label>
+                    <select id="Warehouse_Id" name="Warehouse.Id" class="selectpicker show-tick show-menu-arrow form-control" data-size="10" title="Select Warehouse" asp-items="ViewBag.Warehouses" data-live-search="true">
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 col-sm-12">
+                <div class="form-group">
+                    <label class="control-label">Choose Product Item*</label>
+                    <select id="ProductItem_Id" name="ProductItems.Id" class="selectpicker show-tick show-menu-arrow form-control" data-size="10" title="Select Product Model" data-live-search="true">
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-12 col-sm-12">
+                <div class="form-group">
+                    <label class="control-label">Damage Note</label>
+                    <textarea name="Note" class="form-control" rows="6"></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group right-align">
+                    <br />
+                    <br />
+                    <hr />
+                    <button type="button" class="btn btn-sm btn-outline-success" style="width:250px" onclick='insertRecord("Products", "CreateDamage", "frmCreateForm")'> <i class="zmdi zmdi-save"></i> Damage Confirm</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" style="width:150px" onclick='closeModalCreateForm("mdlCreateForm","CreateForm")'><i class="zmdi zmdi-close"></i> Cancel</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+    <script src="~/js/searchable-dropdown/bootstrap-select.js"></script>
+<script type="text/javascript">
+    //Use For Dropdown Search
+    $('.selectpicker').selectpicker({
+        liveSearch: true,
+        maxOptions: 1
+    });
+
+    $("#Warehouse_Id").on('change', () => {
+        var warehouseId = $("#Warehouse_Id").val();
+        if (warehouseId > 0) {
+            $('#ProductItem_Id').empty();
+            var serverData = getJsonData("Products", "GetProductItems", warehouseId, 'GET');
+            console.log(serverData);
+
+            var item;
+            if (serverData.length != 0) {
+                $.each(serverData, function (i, row) {
+                    item += "<option value='" + row.id + "'>" + row.name + "</option>";
+                });
+            } else {
+                item = "<option value='0'>No product item found</option>";
+            }
+            $('#ProductItem_Id').html(item);
+            $('#ProductItem_Id').selectpicker('refresh');
+        }
+    });
+
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+

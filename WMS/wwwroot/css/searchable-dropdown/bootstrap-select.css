@@ -35,9 +35,10 @@ select.selectpicker {
   display: none !important;
 }
 .bootstrap-select {
-  width: 100%;
-  /*IE9 and below*/
-  vertical-align: middle;
+    width: 100%;
+    /*IE9 and below*/
+    z-index: auto;
+    vertical-align: middle;
 }
     .bootstrap-select > .dropdown-toggle {
         position: relative;
@@ -96,7 +97,7 @@ select.selectpicker {
   color: rgba(255, 255, 255, 0.5);
 }
 .bootstrap-select > select {
-/*  position: absolute !important;
+  position: absolute !important;
   bottom: 0;
   left: 50%;
   display: block !important;
@@ -105,7 +106,7 @@ select.selectpicker {
   padding: 0 !important;
   opacity: 0 !important;
   border: none;
-  z-index: 0 !important;*/
+  z-index: 0 !important;
 }
 .bootstrap-select > select.mobile-device {
   top: 0;

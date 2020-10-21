@@ -6,7 +6,7 @@
   },
   "ConnectionStrings": {
     //Online DB String
-    "DefaultConnection": "Server=AbdHsn-Laptop;Database=WMSDBFRESH;User ID=AbdHsn-dbms; Password=123123"
+    "DefaultConnection": "Server=AbdHsn-Laptop;Database=WMSDB;User ID=AbdHsn-dbms; Password=123123"
 
     // Offline DB String
     // "connection": "Data Source=(LocalDB)\\MSSQLLocalDB;AttachDbFilename=%root%\\_Database\\WMSDB.mdf;Integrated Security=True;Connect Timeout=30",

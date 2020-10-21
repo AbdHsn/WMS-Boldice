@@ -1,67 +1,77 @@
 ﻿@model WMS.Models.PageModels.OrdersVM.CreateOrderDispatchVM
 
-<div class="col-md-12">
-    <form enctype="multipart/form-data" id="frmCreateForm">
-        <div class="row">
-            <div class="col-md-12 col-sm-12">
-                <div class="form-group">
-                    <p class="font-weight-bold mb-0">Order No: @Model.Orders.OrderNo</p>
+@if (Model != null)
+{
+    <div class="col-md-12">
+        <form enctype="multipart/form-data" id="frmCreateForm">
+            <div class="row">
+                <div class="col-md-12 col-sm-12">
+                    <div class="form-group">
+                        <p class="font-weight-bold mb-0">Order No: @Model.Orders.OrderNo</p>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        
-        @if (Model.OrderDetails.Count() <= 0)
-        {
-            <div class="text-center">
-                <span class="badge font-11 badge-soft-purple"> There is no record found</span>
-            </div>
-        }
-        else
-        {
-            <input type="hidden" name="id" value="@Model.Orders.Id" />
-            <div class="table-responsive order-stats">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Product Model Description</th>
-                            <th>Dispatch Items Details</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model.OrderDetails)
-                        {
+            @if (Model.OrderDetails.Count() <= 0)
+            {
+                <div class="text-center">
+                    <span class="badge font-11 badge-soft-purple"> There is no record found</span>
+                </div>
+            }
+            else
+            {
+                <input type="hidden" name="id" value="@Model.Orders.Id" />
+                <div class="table-responsive order-stats">
+                    <table class="table">
+                        <thead>
                             <tr>
-                                <td width="50%">
-                                    <p>
-                                        @(Model.OrderDetails.IndexOf(item)+1).  <b>@item.Products.Name</b> and quantity of @item.OrderDetails.Quantity will be dispatch from warehouse
-                                        @item.Warehouse.Title.
-                                    </p>
-                                </td>
-                                <td width="50%">
-                                    @foreach (var insideItem in item.ProductItemDetails)
-                                    {
-                                    <p class="mb-0"> @(item.ProductItemDetails.IndexOf(insideItem)+1). Item of serial @insideItem.ProductItems.ItemSerial can be pick from Reck @insideItem.Reck.ReckName at level @insideItem.ItemSpace.ReckLevel.</p><br />
-                                    }
-                                </td>
+                                <th>Product Model Description</th>
+                                <th>Dispatch Items Details</th>
                             </tr>
-                        }
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.OrderDetails)
+                            {
+                                <tr>
+                                    <td width="50%">
+                                        <p>
+                                            @(Model.OrderDetails.IndexOf(item) + 1).  <b>@item.Products.Name</b> and quantity of @item.OrderDetails.Quantity will be dispatch from warehouse
+                                            @item.Warehouse.Title.
+                                        </p>
+                                    </td>
+                                    <td width="50%">
+                                        @foreach (var insideItem in item.ProductItemDetails)
+                                        {
+                                            <p class="mb-0"> @(item.ProductItemDetails.IndexOf(insideItem) + 1). Item of serial @insideItem.ProductItems.ItemSerial can be pick from Reck @insideItem.Reck.ReckName at level @insideItem.ItemSpace.ReckLevel.</p><br />
+                                        }
+                                    </td>
+                                </tr>
+                            }
 
-                    </tbody>
-                </table>
-            </div>
-        }
+                        </tbody>
+                    </table>
+                </div>
+            }
 
-        <div class="row">
-            <div class="col-md-12">
-                <div class="form-group right-align">
-                    <br />
-                    <br />
-                    <hr />
-                    <button type="button" class="btn btn-sm btn-outline-success" style="width:250px" onclick='insertRecord("Orders", "CreateDispatchOrder", "frmCreateForm")'> <i class="zmdi zmdi-truck"></i> Dispatch Confirm</button>
-                    <button type="button" class="btn btn-sm btn-outline-danger" style="width:150px" onclick='closeModalCreateForm("mdlCreateForm","CreateForm")'><i class="zmdi zmdi-close"></i> Cancel</button>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group right-align">
+                        <br />
+                        <br />
+                        <hr />
+                        <button type="button" class="btn btn-sm btn-outline-success" style="width:250px" onclick='insertRecord("Orders", "CreateDispatchOrder", "frmCreateForm")'> <i class="zmdi zmdi-truck"></i> Dispatch Confirm</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" style="width:150px" onclick='closeModalCreateForm("mdlCreateForm","CreateForm")'><i class="zmdi zmdi-close"></i> Cancel</button>
+                    </div>
                 </div>
             </div>
-        </div>
-    </form>
-</div>
+        </form>
+    </div>
+
+}
+else
+{
+    <div class="text-center">
+        <span class="badge font-11 badge-soft-danger"> No item is found to dispatch.</span>
+    </div>
+}
+

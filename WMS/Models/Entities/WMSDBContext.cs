@@ -166,13 +166,9 @@ namespace WMS.Models.Entities
 
                 entity.Property(e => e.DamageNo).HasMaxLength(20);
 
-                entity.Property(e => e.EntryDate).HasColumnType("datetime");
+                entity.Property(e => e.DamagedDate).HasColumnType("datetime");
 
                 entity.Property(e => e.Note).HasMaxLength(100);
-
-                entity.Property(e => e.ProductSerial).HasMaxLength(20);
-
-                entity.Property(e => e.TotalAmount).HasColumnType("decimal(18, 2)");
             });
 
             modelBuilder.Entity<ItemSpace>(entity =>
@@ -495,6 +491,8 @@ namespace WMS.Models.Entities
                 entity.Property(e => e.EntryDate).HasColumnType("datetime");
 
                 entity.Property(e => e.Note).HasMaxLength(100);
+
+                entity.Property(e => e.TargetOnEffect).HasMaxLength(15);
             });
 
             modelBuilder.Entity<StockTrace>(entity =>

@@ -255,7 +255,7 @@ namespace WMS.Controllers
                         QRCode = generateQr,
                         Orders = fetchOrder,
                         OrderDetails = fetchOrderDetails.ToList(),
-                        TotalProduct = fetchOrderDetails.Count()
+                        TotalProduct = (int)_context.OrderDetails.Where(od => od.OrderId == fetchOrder.Id).Sum(s=> s.Quantity)
                     };
                 }
 
@@ -486,6 +486,12 @@ namespace WMS.Controllers
             try
             {
                 var fetchOrder = _context.Orders.Find(orderId);
+
+                if (fetchOrder.OrderStatus == StaticValues.ApplicationStatus.FullDispatch.ToString() || fetchOrder.OrderStatus == StaticValues.ApplicationStatus.Cancelled.ToString())
+                {
+                    return PartialView("_OrderDispatch", model);
+                }
+
                 if (fetchOrder != null)
                 {
                     var fetchOrderDetails = from od in _context.OrderDetails
@@ -826,6 +832,18 @@ namespace WMS.Controllers
             try
             {
                 var getReturnProducts = model.ProductItemDetails.Where(p => p.IsReturnable == true).ToList();
+                var getFilteredProductItems = getReturnProducts.Select(s => s.ProductItems.Id);
+               
+                var iSalreadyReturnInWarehouse = _context.ItemSpace.Where(pi => getFilteredProductItems.Contains((long)pi.ProductItemId));
+                
+                var getFilteredVirtualSpace = _context.VirtualSpace.Where(vs => vs.Status == StaticValues.ApplicationStatus.VirtualStored.ToString());
+                var iSalreadyReturnInVirtualSpace = getFilteredVirtualSpace.Where(vs => getFilteredProductItems.Contains((long)vs.ProductItemId));
+
+                if (iSalreadyReturnInWarehouse.Count() > 0 || iSalreadyReturnInVirtualSpace.Count() > 0)
+                {
+                    return result = Json(new { success = false, message = "Items have already returned.", redirectUrl = "" });
+                }
+
                 if (getReturnProducts.Count() > 0)
                 {
                     switch (model.Storage)

@@ -42,7 +42,7 @@
                 [{ text: 'Particular Details', style: 'subsubheader' }, { text: 'Requested Warehouse', style: 'subsubheader' }, { text: 'Quantity', style: 'subsubheader' }]
             ];
             var odWithHeader = od.concat(serverData.orderDetails);
-            var odWithHeaderFooter = odWithHeader.concat([[{ text: 'Total Products: ', colSpan: 2, style: 'subsubheader' }, {}, { text: serverData.totalProduct, style: 'subsubheader' }]]);
+            var odWithHeaderFooter = odWithHeader.concat([[{ text: 'Total Product Items: ', colSpan: 2, style: 'subsubheader' }, {}, { text: serverData.totalProduct, style: 'subsubheader' }]]);
 
             //Assign those dynamic data into printData
             var printData = {

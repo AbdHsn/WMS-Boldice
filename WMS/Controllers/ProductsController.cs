@@ -11,13 +11,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-
+using Newtonsoft.Json;
 using WMS.CommonBusinessFunctions;
 using WMS.CommonBusinessFunctions.BusinessModels;
 using WMS.Models.Entities;
 using WMS.Models.PageModels.ItemVM;
 using WMS.Models.PageModels.ProductEntry;
 using WMS.Models.PageModels.ProductVM;
+using WMS.Models.PageModels.ProductVM.DamageVM;
 using WMS.Models.PageModels.ProductVM.ProductEntry;
 using WMS.Models.PageModels.ProductVM.ReckView;
 using WMS.Models.SharedModels;
@@ -518,6 +519,136 @@ namespace POSMVC.Controllers
 
         //#region PurchaseItems PostMethods
 
+        [HttpPost, ActionName("InsertProductItem")]
+        public async Task<JsonResult> InsertProductItem(InsertProductItemVM model)
+        {
+            var result = (dynamic)null;
+            try
+            {
+                if (ModelState.IsValid)
+                {
+                    //Available Space check
+                    var isSpaceAvailable = await _context.ItemSpace.Where(w => w.WarehouseId == model.WarehouseId && w.IsAllocated == false).ToListAsync();
+                    if (isSpaceAvailable == null || isSpaceAvailable.Count() < model.ProductInsertion.Quantity)
+                    {
+                        var getWarehouseTitle = _context.Warehouse.Where(w => w.Id == model.WarehouseId);
+                        return result = Json(new { success = false, message = "No space available under " + getWarehouseTitle.FirstOrDefault().Title + " for the quantity of " + model.ProductInsertion.Quantity.ToString(), redirectUrl = @"/Products/EntryItems" });
+                    }
+
+                    TransactionOptions options = new TransactionOptions();
+                    options.IsolationLevel = IsolationLevel.Serializable;
+                    options.Timeout = new TimeSpan(0, 10, 0);
+                    using (TransactionScope transaction = new TransactionScope(TransactionScopeOption.Required, options))
+                    {
+                        //Entry No Generate
+                        var getLastEntryNo = _context.ProductInsertion.OrderByDescending(pu => pu.EntryDate).FirstOrDefault();
+                        if (getLastEntryNo != null)
+                        {
+                            int creatEntryNo = Convert.ToInt32(getLastEntryNo.EntryNo.Substring(10)) + 1;
+                            model.ProductInsertion.EntryNo = _cmnBusinessFunction.GenerateNumberWithPrefix("ENT-", creatEntryNo.ToString());
+                        }
+                        else
+                        {
+                            model.ProductInsertion.EntryNo = _cmnBusinessFunction.GenerateNumberWithPrefix("ENT-", 1.ToString());
+                        }
+
+                        //Product Item Insertion
+                        model.ProductInsertion.EntryDate = DateTime.UtcNow;
+                        _context.ProductInsertion.Add(model.ProductInsertion);
+                        _context.SaveChanges();
+
+                        for (int i = 0; i < model.ProductInsertion.Quantity; i++)
+                        {
+                            //Serial No Generate
+                            var getLastSerialOfModel = _context.ProductItems.Where(p => p.ProductId == model.ProductInsertion.ProductId).OrderByDescending(pi => pi.CreatedDate).FirstOrDefault();
+                            int lastSerial = 0;
+                            if (getLastSerialOfModel != null)
+                            {
+                                lastSerial = Convert.ToInt32(getLastSerialOfModel.ItemSerial.Substring(13));
+                            }
+
+                            //Product Item Insertion
+                            var newProductItem = new ProductItems()
+                            {
+                                ProductId = model.ProductInsertion.ProductId,
+                                ItemSerial = model.ProductInsertion.ProductId.ToString().PadLeft(6, '0') + " " + DateTime.Now.ToString("yy") + DateTime.Now.Month.ToString("00") + DateTime.Now.Day.ToString("00") + (lastSerial + 1).ToString().PadLeft(10, '0'),
+                                Status = StaticValues.ApplicationStatus.FreshProduct.ToString(),
+                                CreatedDate = DateTime.UtcNow
+                            };
+                            _context.ProductItems.Add(newProductItem);
+                            _context.SaveChanges();
+
+                            //Update ItemSpace
+                            isSpaceAvailable[i].ProductItemId = newProductItem.Id;
+                            isSpaceAvailable[i].IsAllocated = true;
+                            isSpaceAvailable[i].LastUpdate = DateTime.UtcNow;
+                            isSpaceAvailable[i].ActionedBy = 0;
+                            _context.ItemSpace.Update(isSpaceAvailable[i]);
+                            _context.SaveChanges();
+                        }
+
+                        //Stock Generate only once after loop
+                        var isStockExist = _context.Stock.Where(s => s.ProductId == model.ProductInsertion.ProductId && s.WarehouseId == model.WarehouseId).FirstOrDefault();
+                        if (isStockExist != null)
+                        {
+                            isStockExist.LastQuantity = isStockExist.AvailableQuantity;
+                            isStockExist.AvailableQuantity += model.ProductInsertion.Quantity;
+                            isStockExist.LastUpdate = DateTime.UtcNow;
+
+                            _context.Stock.Update(isStockExist);
+                            _context.SaveChanges();
+
+                            _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                            {
+                                NewQuantity = Convert.ToInt32(model.ProductInsertion.Quantity),
+                                ProductId = Convert.ToInt64(model.ProductInsertion.ProductId),
+                                WarehouseId = Convert.ToInt32(model.WarehouseId),
+                                ReferenecId = model.ProductInsertion.EntryNo,
+                                TableReference = "ProductInsertion",
+                                Note = "Generated From Products/InsertProductItem"
+                            });
+                        }
+                        else
+                        {
+                            var newStock = new Stock()
+                            {
+                                WarehouseId = model.WarehouseId,
+                                ProductId = model.ProductInsertion.ProductId,
+                                AvailableQuantity = model.ProductInsertion.Quantity,
+                                LastQuantity = 0,
+                                CreatedDate = DateTime.UtcNow
+                            };
+                            _context.Stock.Add(newStock);
+                            _context.SaveChanges();
+
+                            _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                            {
+                                NewQuantity = Convert.ToInt32(model.ProductInsertion.Quantity),
+                                WarehouseId = Convert.ToInt32(model.WarehouseId),
+                                ProductId = Convert.ToInt64(model.ProductInsertion.ProductId),
+                                ReferenecId = model.ProductInsertion.EntryNo,
+                                TableReference = "ProductInsertion",
+                                Note = "Generated From Products/InsertProductItem"
+                            });
+                        }
+
+                        transaction.Complete();
+                        return result = Json(new { success = true, message = model.ProductInsertion.EntryNo + " successfully inserted.", redirectUrl = @"/Products/EntryItems" });
+                    }
+
+
+                }
+                else
+                    return result = Json(new { success = false, message = "Data is not valid.", redirectUrl = "" });
+
+            }
+            catch (Exception ex)
+            {
+                string err = @"Exception occured at Products/InsertProductItem: " + ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
         [HttpGet, ActionName("ProductBackToStock")]
         public async Task<IActionResult> ProductBackToStock(long virtualSpaceId)
         {
@@ -650,9 +781,39 @@ namespace POSMVC.Controllers
                 var fetchVS = _context.VirtualSpace.Find(model.Id);
                 if (fetchVS != null)
                 {
-                    fetchVS.Status = StaticValues.ApplicationStatus.Damage.ToString();
-                    _context.VirtualSpace.Update(fetchVS);
-                    _context.SaveChanges();
+                    TransactionOptions options = new TransactionOptions();
+                    options.IsolationLevel = IsolationLevel.Serializable;
+                    options.Timeout = new TimeSpan(0, 10, 0);
+                    using (TransactionScope transaction = new TransactionScope(TransactionScopeOption.Required, options))
+                    {
+                        //Damage No Generate
+                        string newDamageNo = "";
+                        var getLastDamageNo = _context.Damage.OrderByDescending(d => d.DamagedDate).FirstOrDefault();
+                        if (getLastDamageNo != null)
+                        {
+                            int creatDamageNo = Convert.ToInt32(getLastDamageNo.DamageNo.Substring(10)) + 1;
+                            newDamageNo = _cmnBusinessFunction.GenerateNumberWithPrefix("DMG-", creatDamageNo.ToString());
+                        }
+                        else
+                        {
+                            newDamageNo = _cmnBusinessFunction.GenerateNumberWithPrefix("DMG-", 1.ToString());
+                        }
+
+                        var newDamage = new Damage() { 
+                            DamageNo = newDamageNo,
+                            DamagedDate = DateTime.UtcNow,
+                            ProductItemId = fetchVS.ProductItemId,
+                            Note = "Generated from Virtual Store"
+                        };
+                        _context.Damage.Add(newDamage);
+                        _context.SaveChanges();
+
+                        fetchVS.Status = StaticValues.ApplicationStatus.Damage.ToString();
+                        _context.VirtualSpace.Update(fetchVS);
+                        _context.SaveChanges();
+
+                        transaction.Complete();
+                    }
 
                     return result = Json(new { success = true, message = "Product Item is damaged.", redirectUrl = @"/Stock/VirtualStore" });
                 }
@@ -666,162 +827,6 @@ namespace POSMVC.Controllers
             }
         }
 
-
-        [HttpPost, ActionName("InsertProductItem")]
-        public async Task<JsonResult> InsertProductItem(InsertProductItemVM model)
-        {
-            var result = (dynamic)null;
-            try
-            {
-                if (ModelState.IsValid)
-                {
-                    //Available Space check
-                    var isSpaceAvailable = await _context.ItemSpace.Where(w => w.WarehouseId == model.WarehouseId && w.IsAllocated == false).ToListAsync();
-                    if (isSpaceAvailable == null || isSpaceAvailable.Count() < model.ProductInsertion.Quantity)
-                    {
-                        var getWarehouseTitle = _context.Warehouse.Where(w => w.Id == model.WarehouseId);
-                        return result = Json(new { success = false, message = "No space available under " + getWarehouseTitle.FirstOrDefault().Title + " for the quantity of " + model.ProductInsertion.Quantity.ToString(), redirectUrl = @"/Products/EntryItems" });
-                    }
-
-                    TransactionOptions options = new TransactionOptions();
-                    options.IsolationLevel = IsolationLevel.Serializable;
-                    options.Timeout = new TimeSpan(0, 10, 0);
-                    using (TransactionScope transaction = new TransactionScope(TransactionScopeOption.Required, options))
-                    {
-                        //Entry No Generate
-                        var getLastEntryNo = _context.ProductInsertion.OrderByDescending(pu => pu.EntryDate).FirstOrDefault();
-                        if (getLastEntryNo != null)
-                        {
-                            int creatEntryNo = Convert.ToInt32(getLastEntryNo.EntryNo.Substring(10)) + 1;
-                            model.ProductInsertion.EntryNo = _cmnBusinessFunction.GenerateNumberWithPrefix("ENT-", creatEntryNo.ToString());
-                        }
-                        else
-                        {
-                            model.ProductInsertion.EntryNo = _cmnBusinessFunction.GenerateNumberWithPrefix("ENT-", 1.ToString());
-                        }
-
-                        //Product Item Insertion
-                        model.ProductInsertion.EntryDate = DateTime.UtcNow;
-                        _context.ProductInsertion.Add(model.ProductInsertion);
-                        _context.SaveChanges();
-
-                        for (int i = 0; i < model.ProductInsertion.Quantity; i++)
-                        {
-                            //Serial No Generate
-                            var getLastSerialOfModel = _context.ProductItems.Where(p => p.ProductId == model.ProductInsertion.ProductId).OrderByDescending(pi => pi.CreatedDate).FirstOrDefault();
-                            int lastSerial = 0;
-                            if (getLastSerialOfModel != null)
-                            {
-                                lastSerial = Convert.ToInt32(getLastSerialOfModel.ItemSerial.Substring(13));
-                            }
-
-                            //Product Item Insertion
-                            var newProductItem = new ProductItems()
-                            {
-                                ProductId = model.ProductInsertion.ProductId,
-                                ItemSerial = model.ProductInsertion.ProductId.ToString().PadLeft(6, '0') + " " + DateTime.Now.ToString("yy") + DateTime.Now.Month.ToString("00") + DateTime.Now.Day.ToString("00") + (lastSerial + 1).ToString().PadLeft(10, '0'),
-                                Status = StaticValues.ApplicationStatus.FreshProduct.ToString(),
-                                CreatedDate = DateTime.UtcNow
-                            };
-                            _context.ProductItems.Add(newProductItem);
-                            _context.SaveChanges();
-
-                            //Update ItemSpace
-                            isSpaceAvailable[i].ProductItemId = newProductItem.Id;
-                            isSpaceAvailable[i].IsAllocated = true;
-                            isSpaceAvailable[i].LastUpdate = DateTime.UtcNow;
-                            isSpaceAvailable[i].ActionedBy = 0;
-                            _context.ItemSpace.Update(isSpaceAvailable[i]);
-                            _context.SaveChanges();
-                        }
-
-                        //Stock Generate only once after loop
-                        var isStockExist = _context.Stock.Where(s => s.ProductId == model.ProductInsertion.ProductId && s.WarehouseId == model.WarehouseId).FirstOrDefault();
-                        if (isStockExist != null)
-                        {
-                            isStockExist.LastQuantity = isStockExist.AvailableQuantity;
-                            isStockExist.AvailableQuantity += model.ProductInsertion.Quantity;
-                            isStockExist.LastUpdate = DateTime.UtcNow;
-
-                            _context.Stock.Update(isStockExist);
-                            _context.SaveChanges();
-
-                            _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
-                            {
-                                NewQuantity = Convert.ToInt32(model.ProductInsertion.Quantity),
-                                ProductId = Convert.ToInt64(model.ProductInsertion.ProductId),
-                                WarehouseId = Convert.ToInt32(model.WarehouseId),
-                                ReferenecId = model.ProductInsertion.EntryNo,
-                                TableReference = "ProductInsertion",
-                                Note = "Generated From Products/InsertProductItem"
-                            });
-                        }
-                        else
-                        {
-                            var newStock = new Stock()
-                            {
-                                WarehouseId = model.WarehouseId,
-                                ProductId = model.ProductInsertion.ProductId,
-                                AvailableQuantity = model.ProductInsertion.Quantity,
-                                LastQuantity = 0,
-                                CreatedDate = DateTime.UtcNow
-                            };
-                            _context.Stock.Add(newStock);
-                            _context.SaveChanges();
-
-                            _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
-                            {
-                                NewQuantity = Convert.ToInt32(model.ProductInsertion.Quantity),
-                                WarehouseId = Convert.ToInt32(model.WarehouseId),
-                                ProductId = Convert.ToInt64(model.ProductInsertion.ProductId),
-                                ReferenecId = model.ProductInsertion.EntryNo,
-                                TableReference = "ProductInsertion",
-                                Note = "Generated From Products/InsertProductItem"
-                            });
-                        }
-
-                        transaction.Complete();
-                        return result = Json(new { success = true, message = model.ProductInsertion.EntryNo + " successfully inserted.", redirectUrl = @"/Products/EntryItems" });
-                    }
-               
-                
-                }
-                else
-                    return result = Json(new { success = false, message = "Data is not valid.", redirectUrl = "" });
-
-            }
-            catch (Exception ex)
-            {
-                string err = @"Exception occured at Products/InsertProductItem: " + ex.ToString();
-                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
-            }
-        }
-
-        //// [HttpPost, ActionName("ImportFromExcel")]
-        ////public async Task<JsonResult> ImportFromExcel( IFormFile file)
-        ////{
-        ////    var result = (dynamic)null;
-        ////    try
-        ////    {
-        ////        if (ModelState.IsValid)
-        ////        {
-        ////            await Task.Run(() => {
-
-        ////            });
-        ////        }
-        ////        else
-        ////            return result = Json(new { success = false, message = "Data is not valid.", redirectUrl = "" });
-
-        ////    }
-        ////    catch (Exception ex)
-        ////    {
-        ////        string err = @"Exception occured at Users/Create: " + ex.ToString();
-        ////        return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
-        ////    }
-        ////}
-        //#endregion
-
-        //#region Items PostMethods
 
         [HttpPost, ActionName("CreateProductModel")]
         public async Task<JsonResult> Create(Products model)
@@ -934,30 +939,217 @@ namespace POSMVC.Controllers
             }
         }
 
+        public async Task<IActionResult> Damages(int? page)
+        {
+            var pageNumber = page ?? 1;
+            int pageRowSize = 10;
 
-        //[HttpPost, ActionName("ImportFromExcel")]
-        ////public async Task<JsonResult> ImportFromExcel( IFormFile file)
-        ////{
-        ////    var result = (dynamic)null;
-        ////    try
-        ////    {
-        ////        if (ModelState.IsValid)
-        ////        {
-        ////            await Task.Run(() => {
+            var getDamages = from d in _context.Damage
+                             join pi in _context.ProductItems on d.ProductItemId equals pi.Id
+                             join p in _context.Products on pi.ProductId equals p.Id
+                             select new DamageVM { 
+                                Damage = d,
+                                ProductItems = pi,
+                                Products = p
+                             };
 
-        ////            });
-        ////        }
-        ////        else
-        ////            return result = Json(new { success = false, message = "Data is not valid.", redirectUrl = "" });
+            var result = getDamages.ToPagedList(pageNumber, pageRowSize);
+            return View("Damages/Damages", result);
+        }
 
-        ////    }
-        ////    catch (Exception ex)
-        ////    {
-        ////        string err = @"Exception occured at Users/Create: " + ex.ToString();
-        ////        return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
-        ////    }
-        ////}
-        //#endregion
+        [HttpGet, ActionName("CreateDamage")]
+        public async Task<IActionResult> CreateDamage()
+        {
+            ViewData["Warehouses"] = new SelectList(await _context.Warehouse.ToListAsync(), "Id", "Title");
+            return PartialView("Damages/_CreateDamage");
+        }
+
+
+        [HttpPost, ActionName("CreateDamage")]
+        public async Task<JsonResult> CreateDamage(CreateDamageVM obj)
+        {
+            var result = (dynamic)null;
+            try
+            {
+                if (ModelState.IsValid)
+                {
+                    if (obj.Warehouse.Id <= 0)
+                    {
+                        return result = Json(new { success = false, message = "Please select warehouse.", redirectUrl = @"/Products/damages" });
+                    }
+                    
+                    if (obj.ProductItems.Id <= 0)
+                    {
+                        return result = Json(new { success = false, message = "Please select product item.", redirectUrl = @"/Products/damages" });
+                    }
+
+                    var getProductItem = _context.ProductItems.Find(obj.ProductItems.Id);
+                    var getProductModel = _context.Products.Find(getProductItem.ProductId);
+                    //Available Space check
+                    var isItemAvailable = _context.ItemSpace.Where(w => w.ProductItemId == obj.ProductItems.Id && w.WarehouseId == obj.Warehouse.Id && w.IsAllocated == true).FirstOrDefault();
+                    if (isItemAvailable == null)
+                    {
+                        var getWarehouseTitle = _context.Warehouse.Where(w => w.Id == obj.Warehouse.Id);
+                        return result = Json(new { success = false, message = getProductModel.Name+" ("+getProductItem.ItemSerial + ") item is not found under warehouse " + getWarehouseTitle.FirstOrDefault().Title, redirectUrl = @"/Products/damages" });
+                    }
+
+                    TransactionOptions options = new TransactionOptions();
+                    options.IsolationLevel = IsolationLevel.Serializable;
+                    options.Timeout = new TimeSpan(0, 10, 0);
+                    using (TransactionScope transaction = new TransactionScope(TransactionScopeOption.Required, options))
+                    {
+                        //Damage No Generate
+                        string newDamageNo = "";
+                        var getLastDamageNo = _context.Damage.OrderByDescending(d => d.DamagedDate).FirstOrDefault();
+                        if (getLastDamageNo != null)
+                        {
+                            int creatDamageNo = Convert.ToInt32(getLastDamageNo.DamageNo.Substring(10)) + 1;
+                            newDamageNo = _cmnBusinessFunction.GenerateNumberWithPrefix("DMG-", creatDamageNo.ToString());
+                        }
+                        else
+                        {
+                            newDamageNo = _cmnBusinessFunction.GenerateNumberWithPrefix("DMG-", 1.ToString());
+                        }
+
+                        //Damage Insertion
+                        var newDamage = new Damage() {
+                            DamageNo = newDamageNo,
+                            DamagedDate = DateTime.UtcNow,
+                            ProductItemId = obj.ProductItems.Id,
+                            Note = obj.Note,
+                        };
+                        _context.Damage.Add(newDamage);
+                        _context.SaveChanges();
+
+                            //Product Item Update
+                            var existProductItem = _context.ProductItems.Find(obj.ProductItems.Id);
+                            existProductItem.Status = StaticValues.ApplicationStatus.Damage.ToString();
+                            _context.ProductItems.Update(existProductItem);
+                            _context.SaveChanges();
+
+                            //Update ItemSpace
+                            isItemAvailable.ProductItemId = null;
+                            isItemAvailable.IsAllocated = false;
+                            isItemAvailable.LastUpdate = DateTime.UtcNow;
+                            isItemAvailable.ActionedBy = 0;
+                            _context.ItemSpace.Update(isItemAvailable);
+                            _context.SaveChanges();
+
+                        //Stock Generate only once
+                        var isStockExist = _context.Stock.Where(s => s.ProductId == getProductModel.Id && s.WarehouseId == obj.Warehouse.Id).FirstOrDefault();
+                        if (isStockExist != null)
+                        {
+                            isStockExist.LastQuantity = isStockExist.AvailableQuantity;
+                            isStockExist.AvailableQuantity += -1;
+                            isStockExist.LastUpdate = DateTime.UtcNow;
+
+                            _context.Stock.Update(isStockExist);
+                            _context.SaveChanges();
+
+                            _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                            {
+                                NewQuantity = -1,
+                                ProductId = getProductModel.Id,
+                                WarehouseId = obj.Warehouse.Id,
+                                ReferenecId = newDamageNo,
+                                TableReference = "Damage",
+                                Note = "Generated From Products/CreateDamage"
+                            });
+                        }
+                        else
+                        {
+                            var newStock = new Stock()
+                            {
+                                WarehouseId = obj.Warehouse.Id,
+                                ProductId = getProductModel.Id,
+                                AvailableQuantity = -1,
+                                LastQuantity = 0,
+                                CreatedDate = DateTime.UtcNow
+                            };
+                            _context.Stock.Add(newStock);
+                            _context.SaveChanges();
+
+                            _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                            {
+                                NewQuantity = -1,
+                                WarehouseId = obj.Warehouse.Id,
+                                ProductId = getProductModel.Id,
+                                ReferenecId = newDamageNo,
+                                TableReference = "Damage",
+                                Note = "Generated From Products/CreateDamage"
+                            });
+                        }
+
+                        transaction.Complete();
+                        return result = Json(new { success = true, serverData = "Damage saved successfully.", redirectUrl = @"/Products/Damages" });
+
+                    }
+                }
+                return result = Json(new { success = false, serverData = "Data is not valid.", redirectUrl = @"" });
+            }
+            catch (Exception ex)
+            {
+                string err = @"Exception occured at Products/Damages: " + ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
+        [HttpPost, ActionName("DeleteDamage")]
+        public async Task<JsonResult> DeleteDamage(Damage model)
+        {
+            var result = (dynamic)null;
+            try
+            {
+                var d = await _context.Damage.FindAsync(model.Id);
+
+                if (d != null)
+                {
+                    _context.Damage.Remove(d);
+                    await _context.SaveChangesAsync();
+
+                    return result = Json(new { success = true, message = " Record successfully deleted.", redirectUrl = @"/Products/Damages" });
+                }
+                else
+                    return result = Json(new { success = false, message = " Record is not found.", redirectUrl = "" });
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+        }
+
+        #region Page Related Methods
+        [Produces("application/json")]
+        [HttpGet, ActionName("GetProductItems")]
+        public async Task<IActionResult> GetProductItems(string jsonData)
+        {
+            try
+            {
+                var data = JsonConvert.DeserializeObject<int>(jsonData);
+                var result = (dynamic)null;
+                await Task.Run(() => {
+                    var getProductItems = from iS in _context.ItemSpace
+                                      join pI in _context.ProductItems on iS.ProductItemId equals pI.Id
+                                      join p in _context.Products on pI.ProductId equals p.Id
+                                      join w in _context.Warehouse on iS.WarehouseId equals w.Id
+                                      join r in _context.Reck on iS.ReckId equals r.Id
+                                      where iS.WarehouseId == data
+                                      select new { Id = iS.ProductItemId, Name = p.Name + " ("+pI.ItemSerial+") Reck: "+r.ReckName+" Level: "+iS.ReckLevel };
+
+                    result = getProductItems;
+                });
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return BadRequest();
+            }
+        }
+
+        #endregion
+
 
         //#region RemoteValidation
         //[AcceptVerbs("Get", "Post")]

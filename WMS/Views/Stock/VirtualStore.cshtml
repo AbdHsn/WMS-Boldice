@@ -77,8 +77,8 @@
                                             <td width="60%">
                                                 <div><small> Return No: @item.OrderReturn?.ReturnNo</small></div>
                                                 <div><small> Return Date: @item.OrderReturn?.ReturnDate</small></div>
-                                                <div><small> Order No: @item.Orders.OrderNo</small></div>
-                                                <div><small> Order Date: @item.Orders.OrderPlaceDate</small></div>
+                                                <div><small> Order No: @item.Orders?.OrderNo</small></div>
+                                                <div><small> Order Date: @item.Orders?.OrderPlaceDate</small></div>
                                             </td>
                                             <td width="10%">
                                                 <span class="font-15">@item.VirtualSpace.Status</span>

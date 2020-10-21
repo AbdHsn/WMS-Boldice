@@ -35,6 +35,23 @@
         <div class="row">
             <div class="col-md-12 col-sm-12">
                 <div class="form-group">
+                    <label class="control-label">Adjustment Effectiveness</label>
+                    <div class="custom-control custom-radio">
+                        <input type="radio" id="chkVirtualStorage" name="TargetOnEffect" class="custom-control-input" value="Stock" required>
+                        <label class="custom-control-label cursor-pointer" data-toggle="tooltip" data-original-title="Virtual storage can be use when Warehouse has not enough available space." for="chkVirtualStorage">Apply on stock only.</label>
+                    </div>
+
+                    <div class="custom-control custom-radio">
+                        <input type="radio" id="chkWarehouse" name="TargetOnEffect" class="custom-control-input" value="StockAndReck" required>
+                        <label class="custom-control-label cursor-pointer" data-toggle="tooltip" data-original-title="Store in warehouse require enough space and stock will be increase." for="chkWarehouse">Apply on both stock and reck.</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-12 col-sm-12">
+                <div class="form-group">
                     <label asp-for="Note" class="control-label">Adjustment Note</label>
                     <textarea asp-for="Note" class="form-control" rows="6"></textarea>
                     <span asp-validation-for="Note" class="text-danger"></span>
