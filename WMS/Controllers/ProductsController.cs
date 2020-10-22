@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -1151,121 +1152,60 @@ namespace POSMVC.Controllers
         #endregion
 
 
-        //#region RemoteValidation
-        //[AcceptVerbs("Get", "Post")]
-        //[AllowAnonymous]
-        //public JsonResult IsEmailExist(CreateUserVM user)
-        //{
-        //    var email = _context.Users.Where(u => u.Email == user.Users.Email).SingleOrDefault();
-        //    if (email == null)
-        //    {
-        //        return Json(true);
-        //    }
-        //    else
-        //    {
-        //        return Json($"\"{user.Users.Email}\" is already used.");
-        //    }
-        //}
-        //#endregion RemoteValidation
-
-        //#region PurchaseItem Search Methods
-        //[Produces("application/json")]
-        //[HttpGet, ActionName("ItemPurchaseSearch")]
-        //public async Task<IActionResult> ItemPurchaseSearch()
-        //{
-        //    try
-        //    {
-        //        string term = HttpContext.Request.Query["term"].ToString();
-        //        var result = await _context.Purchase.Where(p => p.PurchaseNo.Contains(term)).Select(p => p.PurchaseNo).ToListAsync();
-        //        return Ok(result);
-        //    }
-        //    catch
-        //    {
-        //        return BadRequest();
-        //    }
-        //}
 
 
-        //[HttpGet, ActionName("SearchPurchaseResult")]
-        //public async Task<IActionResult> SearchPurchaseResult(string purchaseNo)
-        //{
-        //    var pageNumber = 1;
-        //    int pageRowSize = 10;
+        #region Charts
+        [Produces("application/json")]
+        [HttpGet, ActionName("GetStockChart")]
+        public IActionResult GetStockChart()
+        {
+            try
+            {
+                var result = (dynamic)null;
+
+                //var getStock = from s in _context.Stock
+                //               join p in _context.Products on s.ProductId equals p.Id
+                //               group s by p.Name into query
+                //               select new StockChartVM
+                //               { 
+                //                    ProductModel =  query.Key,
+                //                    AvailableQuantity = (int)query.Sum(s => s.AvailableQuantity)
+                //               };
+                
+                var getStock = from s in _context.Stock
+                               join p in _context.Products on s.ProductId equals p.Id
+                               group s by p.Name into query
+                               select new StockChartVM
+                               { 
+                                   ProductModel = query.Key, 
+                                   AvailableQuantity = (int)query.Sum(s => s.AvailableQuantity)
+                               };
 
 
-        //    var purchaseItem = new List<ListPurchaseVM>();
+                //var model01 = new OrdersReturnsChartVM();
+                //model01.Label = "Orders";
+                //model01.BorderColor = "green";
+                //model01.BackgroundColor = "rgb(47, 161, 196)";
+                //model01.Data = (from m in month
+                //                join od in fetchOrderDetails on m equals od.Month into results
+                //                from r in results.DefaultIfEmpty()
+                //                select new
+                //                {
+                //                    value = r == null ? 0 : r.SoldItems
+                //                }).Select(s => s.value).ToList();
 
-        //    var getPurchase = from pu in _context.Purchase
-        //                      where pu.PurchaseNo == purchaseNo
-        //                      orderby pu.EntryDate descending
-        //                      join p in _context.Products on pu.ProductId equals p.Id
-        //                      join pt in _context.ProductType on p.ProductTypeId equals pt.Id
-        //                      join mf in _context.Manufacturer on p.ManufacturerId equals mf.Id
-        //                      join br in _context.Brand on p.BrandId equals br.Id
-        //                      select new ListPurchaseVM
-        //                      {
-        //                          Purchase = pu,
-        //                          Products = p,
-        //                          ProductType = pt,
-        //                          Brand = br,
-        //                          Manufacturer = mf
-        //                      };
-        //    purchaseItem = await getPurchase.ToListAsync();
+                //list.Add(model01);
 
-        //    ViewBag.SearchValue = purchaseNo;
-        //    var result = purchaseItem.ToPagedList(pageNumber, pageRowSize);
+                result = getStock;
 
-        //    return View("PurchaseItems/SearchPurchaseItem", result);
-        //}
-        //#endregion
-
-        //#region Item Search Methods
-        //[Produces("application/json")]
-        //[HttpGet, ActionName("ItemSearch")]
-        //public async Task<IActionResult> Search()
-        //{
-        //    try
-        //    {
-        //        string term = HttpContext.Request.Query["term"].ToString();
-        //        var result = await _context.Products.Where(p => p.ProductCode.Contains(term)).Select(p => p.ProductCode).ToListAsync();
-        //        return Ok(result);
-        //    }
-        //    catch
-        //    {
-        //        return BadRequest();
-        //    }
-        //}
-
-
-        //[HttpGet, ActionName("SearchResult")]
-        //public async Task<IActionResult> SearchResult(string productCode)
-        //{
-        //    var pageNumber = 1;
-        //    int pageRowSize = 10;
-        //    int productType = 0;
-
-        //    var products = new List<ListProductVM>();
-        //    var getProducts = from p in _context.Products
-        //                      where p.ProductCode == productCode
-        //                      join pt in _context.ProductType on p.ProductTypeId equals pt.Id
-        //                      join br in _context.Brand on p.BrandId equals br.Id
-        //                      join mf in _context.Manufacturer on p.ManufacturerId equals mf.Id
-        //                      select new ListProductVM
-        //                      {
-        //                          Products = p,
-        //                          ProductType = pt,
-        //                          Brand = br,
-        //                          Manufacturer = mf
-        //                      };
-        //    products = await getProducts.ToListAsync();
-
-        //    ViewData["ProductType"] = new SelectList(_context.ProductType, "Id", "TypeName", productType);
-        //    ViewData["SelectedProductTypeName"] = productType == 0 ? "All" : _context.ProductType.Find(productType).TypeName;
-        //    ViewBag.SearchValue = productCode;
-        //    var result = products.ToPagedList(pageNumber, pageRowSize);
-        //    return View("SearchItem", result);
-        //}
-        //#endregion
-
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                string err = ex.ToString();
+                return BadRequest();
+            }
+        }
+        #endregion
     }
 }
