@@ -1,4 +1,52 @@
-﻿.right-align {
+﻿/*@page {
+    margin: 1in;*/
+    /* margin for each printed piece of paper*/
+/*}
+
+@page :first {
+    margin-top: 1in;*/
+/*     top margin for first page of paper*/
+/*}
+
+@media print {
+    body {
+        margin: 0;
+
+    }
+}*/
+/*This isworking fine*/
+/*@media print {
+    .header, .hide {
+        visibility: hidden
+    }
+}
+*/
+
+@media print {
+    @page {
+        size: A4; /* DIN A4 standard, Europe */
+        margin: 25px 20px 15px 20px;
+    }
+    
+    @page :first {
+        margin: 20px 20px 15px 20px;
+    }
+
+    html, body {
+        /*width: 210mm;*/
+     /*    height: 297mm; */
+        /*height: 282mm;*/
+        font-size: 11px;
+        background: #FFF;
+        overflow: visible;
+    }
+
+  /*  body {
+        padding: 10px;
+    }*/
+}
+
+.right-align {
     text-align: right;
 }
 
@@ -6,6 +54,8 @@
     position: relative;
     width: 100%;
 }
+
+
 
 .image {
     object-fit: cover;
@@ -15,6 +65,13 @@
     height: 250px;
     transition: .5s ease;
     backface-visibility: hidden;
+}
+
+.center-content-vertically {
+    margin: auto;
+/*    width: 50%;*/
+/*    border: 3px solid green;*/
+   /* padding: 10px;*/
 }
 
 .middle {

@@ -1,0 +1,112 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="~/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="~/favicon.ico" type="image/x-icon">
+    <title>@ViewData["Title"]</title>
+
+    <environment include="Development">
+
+        <!-- #region Templete CSS -->
+        <link href="~/style.css" rel="stylesheet" />
+        <link href="~/css/jquery-ui-autocomplete.css" rel="stylesheet" />
+        <link href="~/css/sweetalert.css" rel="stylesheet" />
+        <link href="~/css/bootstrap-datepicker.min.css" rel="stylesheet" />
+
+        <!-- #endregion -->
+        <!-- #region Custom CSS -->
+        <link href="~/css/searchable-dropdown/bootstrap-select.css" rel="stylesheet" />
+        <link href="~/css/CustomStyle.css" rel="stylesheet" />
+        <!-- #endregion -->
+
+    </environment>
+
+    <environment exclude="Development">
+        <!-- #region Templete CSS -->
+        <link href="~/style.css" rel="stylesheet" />
+        <link href="~/css/jquery-ui-autocomplete.css" rel="stylesheet" />
+        <link href="~/css/sweetalert.css" rel="stylesheet" />
+
+        <!-- #endregion -->
+        <!-- #region Custom CSS -->
+        <link href="~/css/searchable-dropdown/bootstrap-select.min.css" rel="stylesheet" />
+        <link href="~/css/CustomStyle.css" rel="stylesheet" />
+        <!-- #endregion -->
+    </environment>
+
+    @RenderSection("Css", required: false)
+</head>
+<body>
+
+    @RenderBody()
+
+    <environment include="Development">
+
+        <!-- #region Templete Preferred JS -->
+        <!-- Must needed plugins to the run this Template -->
+        <script src="~/js/jquery.min.js"></script>
+        <script src="~/js/jquery-ui-autocomplete.js"></script>
+        <script src="~/js/popper.min.js"></script>
+        <script src="~/js/bootstrap.min.js"></script>
+        <script src="~/js/date-time-conversion.js"></script>
+        <script src="~/js/bundle.js"></script>
+        <script src="~/js/default-assets/setting.js"></script>
+        <script src="~/js/default-assets/fullscreen.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js"></script>
+
+
+        <!-- Active JS -->
+        <script src="~/js/default-assets/active.js"></script>
+
+        <!-- These plugins only need for the run this page -->
+
+        <script src="~/js/default-assets/dashboard-active.js"></script>
+        <script src="~/js/default-assets/apexchart.min.js"></script>
+        <!-- #endregion -->
+        <!-- #region Validation Js -->
+        <script src="~/js/jquery-validate/jquery.validate.js"></script>
+        <script src="~/js/jquery-validation-unobtrusive/jquery.validate.unobtrusive.js"></script>
+        <!-- #endregion -->
+        <!-- #region CustomJs -->
+        <script src="~/js/sweetalert.min.js"></script>
+        <script src="~/js/CustomJavaScript.js"></script>
+        <!-- #endregion -->
+    </environment>
+
+    <environment exclude="Development">
+        <!-- #region Templete Preferred JS -->
+        <!-- Must needed plugins to the run this Template -->
+        <script src="~/js/jquery.min.js"></script>
+        <script src="~/js/jquery-ui-autocomplete.js"></script>
+        <script src="~/js/popper.min.js"></script>
+        <script src="~/js/bootstrap.min.js"></script>
+        <script src="~/js/date-time-conversion.js"></script>
+        <script src="~/js/bundle.js"></script>
+        <script src="~/js/default-assets/setting.js"></script>
+        <script src="~/js/default-assets/fullscreen.js"></script>
+
+        <!-- Active JS -->
+        <script src="~/js/default-assets/active.js"></script>
+
+        <!-- These plugins only need for the run this page -->
+
+        <script src="~/js/default-assets/apexchart.min.js"></script>
+        <script src="~/js/default-assets/dashboard-active.js"></script>
+        <!-- #endregion -->
+        <!-- #region Validation Js -->
+
+        <script src="~/js/jquery-validate/jquery.validate.min.js"></script>
+        <script src="~/js/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+        <!-- #endregion -->
+        <!-- #region CustomJs -->
+        <script src="~/js/sweetalert.min.js"></script>
+        <script src="~/js/CustomJavaScript.js"></script>
+        <!-- #endregion -->
+    </environment>
+
+    @RenderSection("Scripts", required: false)
+
+</body>
+</html>

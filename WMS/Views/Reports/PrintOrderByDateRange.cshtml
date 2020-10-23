@@ -1,0 +1,121 @@
+﻿@using X.PagedList.Mvc.Core;
+@using X.PagedList;
+@model WMS.Models.PageModels.ReportsVM.GetOrderByDateRange.GetOrderByDateRange
+
+
+@{
+    ViewData["Title"] = "";
+    //Layout = null;
+    Layout = "~/Views/Shared/_BlankLayout.cshtml";
+}
+
+<div class="container-fluid document-print" id="printView">
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-30">
+                <div class="card-body pb-0">
+
+                    <div class="row p-1" style="border-bottom:solid 2px;">
+                        <img class="pl-3" src="~/@Model.Company.SmallLogo" alt="Logo" height="100px" width="100px" />
+                        <h3 class="mt-3 pl-2">
+                            @Model.Company.Name <br />
+                        <small>@Model.Company.Address</small>
+                    </h3>
+                </div>
+                <br />
+
+                <div class="row">
+                    <div class="col-6">
+                        <h4><u>ORDER REPORT </u> </h4>
+                    </div>
+                    <div class="col-6">
+                        <div class="pull-right">Record Found : @Model.OrdersVM.Count()</div><br />
+                        <div class="pull-right">Chosen Date Range: @Model.FromDate.Value.ToString("MMM dd yyyy") To @Model.ToDate.Value.ToString("MMM dd yyyy"), With Status: @Model.Status</div>
+                        <div class="pull-right">
+                            Printed Date&Time : @DateTime.Now.ToString("dddd, MMM dd yyyy"), @DateTime.Now.ToString("h:mm:ss tt")
+                        </div>
+                    </div>
+                </div>    
+
+              
+
+                <div class="table-responsive">
+                    <table class="table table-borderless" id="tblOrderReport">
+                        <thead>
+                            <tr>
+                                <th>SL</th>
+                                <th>Order No</th>
+                                <th>Order Details</th>
+                                <th>Date of Order</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.OrdersVM)
+                            {
+                                <tr>
+                                    <td width="5%">
+                                        <span class="font-13">@(Model.OrdersVM.IndexOf(item)+1)</span>
+                                    </td>
+                                    <td width="20%">
+                                        <span class="font-13">@item.Orders.OrderNo</span>
+                                    </td>
+                                    <td width="40%">
+
+                                        @foreach (var insideItem in item.OrderDetails)
+                                        {
+                                            <span class="text-justify">
+                                                @((item.OrderDetails.IndexOf(insideItem)+1) + ". " + insideItem.Products.Name + " QTY: " + insideItem.OrderDetails.Quantity + " from Warehouse-> " + insideItem.Warehouse.Title)
+                                                <br />
+                                            </span>
+                                        }
+
+                                    </td>
+                                    <td width="25%">
+                                        <div>@item.Orders.OrderPlaceDate.Value.ToString("dddd, MMM dd yyyy") at @item.Orders.OrderPlaceDate.Value.ToString("h:mm:ss tt")</div>
+
+                                    </td>
+                                    <td width="10%">
+                                        <span class="font-13">@item.Orders.OrderStatus</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts{
+
+    <script src="~/js/table-to-excel.js"></script>
+    <script src="~/js/bootstrap-datepicker.min.js"></script>
+    <script type="text/javascript">
+
+        var currentDateTime = new Date();
+        var getPreciseDateTime = currentDateTime.getDate() + "-"
+            + (currentDateTime.getMonth() + 1) + "-"
+            + currentDateTime.getFullYear() + "-"
+            + currentDateTime.getHours() + ":"
+            + currentDateTime.getMinutes() + ":"
+            + currentDateTime.getSeconds();
+
+        //This arrow function will call after page loaded.
+        $(() => {
+            print();
+        });
+
+        window.onafterprint = function () {
+            window.top.close();
+        }
+    </script>
+
+}
+

@@ -113,30 +113,35 @@
             <div class="col-xl-4 box-margin height-card">
                 <div class="card">
                     <div class="card-body">
-                        <h6 class="card-title">Sales Statement</h6>
-                        <div class="crm-statement border p-4">
-                            <h6 class="text-center font-weight-bold mb-30 font-24">Average</h6>
-                            <div class="row">
-                                <div class="col text-center mb-15">
-                                    <h6 class="font-14 mb-1">Daily</h6>
-                                    <p class="font-16 mb-0">$300</p>
+                        <h4 class="card-title">Loses</h4>
+                
+
+
+                        <div class="row px-4">
+                            <div class="col-4 mt-15">
+                                <h6 class="font-13 mb-1">Damages</h6>
+                                <div class="d-flex align-items-center">
+                                    <h5 class="mb-0">120 <small class="text-muted">25%</small></h5>
                                 </div>
-                                <div class="col text-center mb-15">
-                                    <h6 class="font-14 mb-1">Weekly</h6>
-                                    <p class="font-16 mb-0">$1400</p>
+                            </div><!-- col -->
+                            <div class="col-4 mt-15">
+                                <h6 class="font-13 mb-1">Wastage</h6>
+                                <div class="d-flex align-items-center">
+                                    <h5 class="mb-0">987 <small class="text-muted">20%</small></h5>
                                 </div>
-                                <div class="col text-center mb-15">
-                                    <h6 class="font-14 mb-1">Monthly</h6>
-                                    <p class="font-16 mb-0">$5000</p>
+                            </div><!-- col -->
+                            <div class="col-4 mt-15">
+                                <h6 class="font-13 mb-1">Spent</h6>
+                                <div class="d-flex align-items-center">
+                                    <h5 class="mb-0">154 <small class="text-muted">25%</small></h5>
                                 </div>
-                            </div>
-                            <div class="progress h-6 mt-15 mb-10">
-                                <div class="progress-bar bg-primary" role="progressbar" style="width: 65%;" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
+                            </div><!-- col -->
                         </div>
                     </div>
                 </div>
             </div>
+
+
         </div>
 
 
@@ -157,6 +162,7 @@
 
             salesAndReturnChart(fetchSalesAndReturnChart);
             stockChart(fetchStockChart);
+ 
         });
 
         function salesAndReturnChart(data) {
@@ -272,7 +278,6 @@
             var strTime = date + " " + month[currentTime.getMonth()] + " " + year + ", " + hours + ':' + minutes + ':' + seconds + ' ' + ampm;
             $(".CurrentClock").html(strTime);
         }
-
     </script>
 
 }
