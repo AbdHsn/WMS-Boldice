@@ -54,6 +54,8 @@ namespace WMS
 
             services.AddMvc().AddJsonOptions(option =>
             option.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
+            services.AddOptions();
+            services.Configure <Settings>(Configuration.GetSection("ConnectionStrings"));
             services.AddScoped<CommonFunctions>();
             services.AddScoped<CommonBusinessLogics>();
 

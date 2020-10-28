@@ -1,13 +1,13 @@
 ﻿@using X.PagedList.Mvc.Core;
 @using X.PagedList;
-@model WMS.Models.PageModels.ReportsVM.GetOrderByDateRange.GetOrderByDateRange
+@model WMS.Models.PageModels.ReportsVM.GetOrderDispatchByDateRange.GetOrderDispatchByDateRange
 
 
 @{
-    ViewData["Title"] = "Order Reports";
+    ViewData["Title"] = "Order Dispatch Reports";
     Layout = "~/Views/Shared/_Layout.cshtml";
 
-    var ddlOrderStatus = (SelectList)ViewBag.ddlOrderStatus == null ? null : (SelectList)ViewBag.ddlOrderStatus;
+    var ddlStatus = (SelectList)ViewBag.ddlOrderDispatchStatus == null ? null : (SelectList)ViewBag.ddlOrderDispatchStatus;
 
 }
 
@@ -21,17 +21,17 @@
 
                         <div class="row">
                             <div class="col-md-6">
-                                <h6 class="card-title mb-0">Order Report</h6>
+                                <h6 class="card-title mb-0">Order Dispatch Report</h6>
                             </div>
                             <div class="col-md-6 float-right">
-                                <form id="GetOrderByDateRange" asp-controller="Reports" asp-action="GetOrderByDateRange" method="get">
+                                <form id="GetOrderByDateRange" asp-controller="Reports" asp-action="GetOrderDispatchByDateRange" method="get">
                                         <label class="text-info mt-1">Please choose your desire criteria to get data.</label>
                                     <div class="input-group">
                                         <input name="FromDate" id="fromDate" class="form-control" value='@(Model == null ? "" : Model.FromDate.Value.ToShortDateString())' placeholder="From Date" type="text" data-provide="datepicker" data-date-autoclose="true" />
                                         <input name="ToDate" id="toDate" class="form-control" value='@(Model == null ? "" : Model.ToDate.Value.ToShortDateString())' placeholder="To Date" type="text" data-provide="datepicker" data-date-autoclose="true" />
                                         <select name="Status" id="status" class="form-control">
                                             <option value="All">All</option>
-                                            @foreach (var item in ddlOrderStatus)
+                                            @foreach (var item in ddlStatus)
                                             {
                                                 if (item.Value == Model?.Status)
                                                 {
@@ -53,7 +53,7 @@
 
                     @if (Model != null)
                     {
-                        @if (Model.OrdersVM.Count() <= 0)
+                        @if (Model.OrdersDispatchVM.Count() <= 0)
                         {
                             <div class="text-center">
                                 <span class="badge font-11 badge-soft-purple"> There is no record found</span>
@@ -62,47 +62,49 @@
                         }
                         else
                         {
-                            <label class="label-info">Record Found : @Model.OrdersVM.Count()</label>
+                            <label class="label-info">Record Found : @Model.OrdersDispatchVM.Count()</label>
                             <label class="label-info">Chosen Date Range: @Model.FromDate.Value.ToShortDateString() To @Model.ToDate.Value.ToShortDateString(), With Status: @Model.Status</label>
                             <a href="#" id="lnkExport" class="badge badge-primary pull-right mx-1 px-3">Export</a>
-                            <a id="lnkPrint" target="_blank" asp-action="PrintOrderByDateRange" asp-controller="Reports" asp-route-fromDate='@(Model.FromDate == null ? "" : Model.FromDate.Value.ToShortDateString())' asp-route-toDate='@(Model.ToDate == null ? "" : Model.ToDate.Value.ToShortDateString())' asp-route-status='@Model.Status' class="badge badge-primary pull-right mx-1 px-3">Print</a>
-                            <table class="table table-borderless" id="tblOrderReport">
+                            <a id="lnkPrint" target="_blank" asp-action="PrintOrderDispatchByDateRange" asp-controller="Reports" asp-route-fromDate='@(Model.FromDate == null ? "" : Model.FromDate.Value.ToShortDateString())' asp-route-toDate='@(Model.ToDate == null ? "" : Model.ToDate.Value.ToShortDateString())' asp-route-status='@Model.Status' class="badge badge-primary pull-right mx-1 px-3">Print</a>
+                            <table class="table table-borderless" id="tblOrderDispatchReport">
                                 <thead>
                                     <tr>
                                         <th>SL</th>
-                                        <th>Order No</th>
-                                        <th>Order Details</th>
-                                        <th>Date of Order</th>
+                                        <th>Dispatch & Order No</th>
+                                        <th>Dispatch Items</th>
+                                        <th>Date of Dispatch</th>
                                         <th>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var item in Model.OrdersVM)
+                                    @foreach (var item in Model.OrdersDispatchVM)
                                     {
                                         <tr>
                                             <td width="5%">
-                                                <span class="font-13">@(Model.OrdersVM.IndexOf(item)+1)</span>
+                                                <span class="font-13">@(Model.OrdersDispatchVM.IndexOf(item) + 1)</span>
                                             </td>
                                             <td width="20%">
-                                                <span class="font-13">@item.Orders.OrderNo</span>
+                                                <div class="font-13">@item.OrderDispatch.DispatchNo</div>
+                                                <div class="font-13">@item.Orders.OrderNo</div>
                                             </td>
                                             <td width="40%">
-
-                                                @foreach (var insideItem in item.OrderDetails)
+                                                @{int innerNo = 0;} 
+                                                @foreach (var insideItem in item.OrderDispatchDetails)
                                                 {
+
                                                     <span class="text-justify">
-                                                        @((item.OrderDetails.IndexOf(insideItem)+1) + ". " + insideItem.Products.Name + " QTY: " + insideItem.OrderDetails.Quantity + " from Warehouse-> " + insideItem.Warehouse.Title)
+                                                        @((innerNo+1) + ". " + insideItem.Products.Name + " (" + insideItem.ProductItems.ItemSerial + ") dispatched from Warehouse-> " + insideItem.Warehouse.Title +", Reck-> "+insideItem.Reck.ReckName+" at level "+insideItem.ItemSpace.ReckLevel)
                                                         <br />
                                                     </span>
+                                                    innerNo++;
                                                 }
 
                                             </td>
                                             <td width="25%">
-                                                <div>@item.Orders.OrderPlaceDate.Value.ToString("dddd, MMM dd yyyy") at @item.Orders.OrderPlaceDate.Value.ToString("h:mm:ss tt")</div>
-
+                                                <div>@item.OrderDispatch.DispatchDate.Value.ToString("dddd, MMM dd yyyy") at @item.OrderDispatch.DispatchDate.Value.ToString("h:mm:ss tt")</div>
                                             </td>
                                             <td width="10%">
-                                                <span class="font-13">@item.Orders.OrderStatus</span>
+                                                <span class="font-13">@item.OrderDispatch.Status</span>
                                             </td>
                                         </tr>
                                     }
@@ -134,11 +136,10 @@
 
         $('#lnkExport').on('click', () => {
 
-            $("#tblOrderReport").table2excel({
+            $("#tblOrderDispatchReport").table2excel({
                 exclude: ".out",
-                name: "OrderReport",
-              //  filename: "OrderReport-" + new Date().today() + "-" + new Date().timeNow() +".xls",
-                filename: "OrderReport(" + getPreciseDateTime +").xls",
+                name: "OrderDispatchReport",
+                filename: "OrderDispatchReport(" + getPreciseDateTime +").xls",
                 //  fileext: ".xls",
                 preserveColors: true
             });

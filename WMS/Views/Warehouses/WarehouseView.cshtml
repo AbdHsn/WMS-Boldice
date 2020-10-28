@@ -1,6 +1,6 @@
-﻿@using X.PagedList.Mvc.Core;
-@using X.PagedList;
-@model IEnumerable<WMS.Models.PageModels.WarehouseVM.ListWarehouseCapasityVM>
+﻿@*@using X.PagedList.Mvc.Core;
+    @using X.PagedList;*@
+@model WMS.Models.PageModels.WarehouseVM.WarehouseCapasityVM
 
 @{
     ViewData["Title"] = "Warehouse Capacity";
@@ -15,7 +15,7 @@
             <div class="card mb-30">
                 <div class="card-body pb-0">
 
-                    @if (Model.Count() <= 0)
+                    @if (Model.ListWarehouseCapacity.Count() <= 0)
                     {
                         <div class="text-center">
                             <span class="badge font-11 badge-soft-purple"> No warehouse design found</span>
@@ -25,25 +25,34 @@
                     else
                     {
                         int index = 1;
-                        @foreach (var item in Model)
+                        @foreach (var item in Model.ListWarehouseCapacity)
                         {
                             <h4 class="mt-2 mb-1 card-title"><u> @item.Warehouse.Title Design @index </u> </h4>
-                            for (int i = 1; i <= item.WarehouseCapacity.Row; i++)
+                            for (int row = 1; row <= item.WarehouseCapacity.Row; row++)
                             {
                                 <div class="avatar-area">
                                     <div class="media">
-                                        @for (int j = 1; j <= item.WarehouseCapacity.Column; j++)
+                                        @for (int column = 1; column <= item.WarehouseCapacity.Column; column++)
                                         {
-                                            <div class="avatar-box thumb-lg align-self-center mr-2">
-                                                <span class="avatar-title bg-primary-lighten rounded">
-
-                                                    @*@for (int k = 1; k <= item.WarehouseCapacity.ReckQuantity; k++)
-                                                    {
-                                                        <a href="#" onclick='addReck("mdlCreateForm", "CreateForm", "Warehouses","CreateReck", "?reckQuantity=@item.WarehouseCapacity.ReckQuantity&warehouseId=@item.WarehouseCapacity.WarehouseId&row=@i&column=@j")' class="badge badge-success"> <i class="zmdi zmdi-collection-plus" title="Add Reck"></i> </a>
-                                                    }*@
-                                                        <a href="#" onclick='addReck("mdlCreateForm", "CreateForm", "Warehouses","CreateReck", "?reckQuantity=@item.WarehouseCapacity.ReckQuantity&warehouseId=@item.WarehouseCapacity.WarehouseId&row=@i&column=@j")' class="badge badge-outline-success"> <i class="zmdi zmdi-collection-plus" title="Add Reck"></i> </a>
-                                                        <a href="#" onclick='viewReck("mdlReckView", "reckView", "Products","ReckView", "?warehouseId=@item.WarehouseCapacity.WarehouseId&row=@i&column=@j")' class="badge badge-outline-warning"> <i class="zmdi zmdi zmdi-layers" title="View Reck"></i> </a>
-                                                </span>
+                                            <div class="container-fluid h-100 d-inline-block mr-2 p-2" style=" background-color: rgba(0,0,255,.1)">
+                                                @{
+                                                    var recks = item?.ListReck.Where(r => r.SetupRow == row && r.SetupColumn == column);
+                                                 }
+                                                @if (recks.Count() < item.WarehouseCapacity.ReckQuantity)
+                                                {
+                                                <p class="m-0">
+                                                    <a href="#" onclick='addReck("mdlCreateForm", "CreateForm", "Warehouses","CreateReck", "?reckQuantity=@item.WarehouseCapacity.ReckQuantity&warehouseId=@item.WarehouseCapacity.WarehouseId&row=@row&column=@column")' class="badge badge-outline-success"> <i class="zmdi zmdi-collection-plus" title="Add Reck"></i> Add Reck </a>
+                                                </p>
+                                                }
+                                                @foreach (var insideReck in recks)
+                                                {
+                                            <p class="m-0">
+                                                @*used for multiple reck view with their items
+                                                <a href="#" onclick='viewReck("mdlReckView", "reckView", "Products","ReckView", "?warehouseId=@item.WarehouseCapacity.WarehouseId&row=@row&column=@column")' class="badge badge-light"> <i class="zmdi zmdi zmdi-layers pr-1" title="View Reck"></i>View Reckcccccc @insideReck.ReckName </a>*@
+                                                
+                                                <a href="#" onclick='viewReck("mdlReckView", "reckView", "Products","SingleReckView", "?reckId=@insideReck.Id")' class="badge badge-light"> <i class="zmdi zmdi zmdi-layers pr-1" title="View Reck"></i>View Reck (@insideReck.ReckName) </a>
+                                            </p>
+                                                }
                                             </div>
                                         }
                                     </div>
@@ -53,17 +62,17 @@
                             index++;
                         }
 
-                        <div class="form-group pull-right">
-                            @Html.PagedListPager((IPagedList)Model, page => Url.Action("WarehouseView", new { page = page }),
-                           new X.PagedList.Mvc.Common.PagedListRenderOptionsBase
-                           {
-                               DisplayItemSliceAndTotal = true,
-                               ContainerDivClasses = new[] { "navigation", "btn btn-default" },
-                               LiElementClasses = new[] { "page-item" },
-                               PageClasses = new[] { "btn-success", "page-link" },
-                               ActiveLiElementClass = "btn-defult"
-                           })
-                        </div>
+                        @*<div class="form-group pull-right">
+                                @Html.PagedListPager((IPagedList)Model, page => Url.Action("WarehouseView", new { page = page }),
+                               new X.PagedList.Mvc.Common.PagedListRenderOptionsBase
+                               {
+                                   DisplayItemSliceAndTotal = true,
+                                   ContainerDivClasses = new[] { "navigation", "btn btn-default" },
+                                   LiElementClasses = new[] { "page-item" },
+                                   PageClasses = new[] { "btn-success", "page-link" },
+                                   ActiveLiElementClass = "btn-defult"
+                               })
+                            </div>*@
                     }
 
                 </div>
@@ -93,13 +102,13 @@
             </div>
         </div>
     </div>
-    
+
     <div class="modal fade" id="mdlReckView" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-modal="false">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title mt-0 font-16" id="myLargeModalLabel">Reck Details</h5>
-                    <button type="button" class="close" onclick='closeModalReckView("mdlReckView","reckView")'>
+                    <button type="button" class="close" onclick='closeModalReckView("mdlReckView", "reckView")'>
                         <span aria-hidden="true">×</span>
                     </button>
                 </div>
@@ -153,4 +162,3 @@
     </script>
 
 }
-

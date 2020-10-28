@@ -13,12 +13,25 @@ using System.Text;
 using ZXing;
 using ZXing.QrCode;
 using ZXing.CoreCompat.System.Drawing;
+using Microsoft.Extensions.Configuration;
+using System.Data.SqlClient;
+using Microsoft.Extensions.Options;
+using WMS;
 
 namespace CommonLogics
 {
     public class CommonFunctions
     {
+
         string error = "";
+        private readonly Settings settings;
+
+        public CommonFunctions(IOptions<Settings> settings)
+        {
+            this.settings = settings.Value;
+        }
+
+
 
         #region "Image Functions"       
         public bool SaveImage(IFormFile actualImage, string imageName, string savePath, string imageExtension, int height = 0, int width = 0)
@@ -249,5 +262,29 @@ namespace CommonLogics
             }
         }
         #endregion
-    }
+
+        #region DatabaseQuery
+        public object ExecuteRawSQL(string rowSqlCommand)
+        {
+            object result = (dynamic)null;
+            SqlConnection conn = new SqlConnection(settings.DefaultConnection);
+            SqlCommand cmd = new SqlCommand(rowSqlCommand, conn);
+            try
+            {
+                conn.Open();
+                //Since return type is System.Object, a typecast is must
+                var db = cmd.ExecuteScalar();
+            }
+            catch (Exception ex)
+            {
+                error = ex.ToString();
+            }
+            finally
+            {
+                conn.Close();
+            }
+            return result;
+        }
+        #endregion
+    } 
 }

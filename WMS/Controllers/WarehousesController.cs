@@ -7,7 +7,9 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using WMS.Models.Entities;
 using WMS.Models.PageModels.WarehouseVM;
+using WMS.Models.PageModels.WarehouseVM.WarehouseCapacityVM;
 using X.PagedList;
+using ZXing;
 
 namespace WMS.Controllers
 {
@@ -64,13 +66,13 @@ namespace WMS.Controllers
             var pageNumber = page ?? 1;
             int pageRowSize = 10;
 
-            var lstWarehouseCapasity = new List<ListWarehouseCapasityVM>();
-            var warehouseCapasity = from wc in _context.WarehouseCapacityDefination
-                                    join wh in _context.Warehouse on wc.WarehouseId equals wh.Id
-                                    select new ListWarehouseCapasityVM { WarehouseCapacity = wc, Warehouse = wh };
-            lstWarehouseCapasity = await warehouseCapasity.ToListAsync();
-            var result = lstWarehouseCapasity.ToPagedList(pageNumber, pageRowSize);
+            var warehousewithReckCapacity = _context.Warehouse.Select(w => 
+            new WarehouseCapacityVM { 
+                Warehouse = w,
+                WarehouseCapacity = _context.WarehouseCapacityDefination.Where(wc => wc.WarehouseId == w.Id)
+            });
 
+            var result = warehousewithReckCapacity.ToPagedList(pageNumber, pageRowSize);
             return View("WarehouseCapacity/WarehouseCapacity", result);
         }
 
@@ -79,12 +81,20 @@ namespace WMS.Controllers
             var pageNumber = page ?? 1;
             int pageRowSize = 10;
 
-            var lstWarehouseCapasity = new List<ListWarehouseCapasityVM>();
             var warehouseCapasity = from wc in _context.WarehouseCapacityDefination
                                     join wh in _context.Warehouse on wc.WarehouseId equals wh.Id
-                                    select new ListWarehouseCapasityVM { WarehouseCapacity = wc, Warehouse = wh };
-            lstWarehouseCapasity = await warehouseCapasity.ToListAsync();
-            var result = lstWarehouseCapasity.ToPagedList(pageNumber, pageRowSize);
+                                    select new ListWarehouseCapasity
+                                    {
+                                        WarehouseCapacity = wc,
+                                        Warehouse = wh,
+                                        ListReck = _context.Reck.Where(r => r.WarehouseId == wc.WarehouseId),
+                                       // IsSpaceAvailable = _context.Reck.Where(r => r.WarehouseId == wc.WarehouseId).Count() < wc.ReckQuantity ? true : false
+                                    };
+            
+            var result = new WarehouseCapasityVM()
+            {
+                ListWarehouseCapacity = warehouseCapasity,
+            };
 
             return View(result);
         }

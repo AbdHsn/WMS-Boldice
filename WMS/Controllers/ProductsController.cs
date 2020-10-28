@@ -155,20 +155,20 @@ namespace POSMVC.Controllers
             }
 
             var getItems = (from iS in _context.ItemSpace
-                           join pI in _context.ProductItems on iS.ProductItemId equals pI.Id
-                           join p in _context.Products on pI.ProductId equals p.Id
-                           join w in _context.Warehouse on iS.WarehouseId equals w.Id
-                           join r in _context.Reck on iS.ReckId equals r.Id
-                           where pI.ProductId == productId
-                           select new ItemWithDetail
-                           { 
-                              ProductId = p.Id,
-                              ProductName = p.Name,
-                              ItemSerial = pI.ItemSerial,
-                              WarehouseTitle = w.Title,
-                              ReckTitle = r.ReckName,
-                              ReckLevel = (int)iS.ReckLevel
-                           }).GroupBy(g => g.WarehouseTitle).Select(s => new ItemsLocationVM { Warehouse = s.Key,  ItemDetails = s.ToList()});
+                            join pI in _context.ProductItems on iS.ProductItemId equals pI.Id
+                            join p in _context.Products on pI.ProductId equals p.Id
+                            join w in _context.Warehouse on iS.WarehouseId equals w.Id
+                            join r in _context.Reck on iS.ReckId equals r.Id
+                            where pI.ProductId == productId
+                            select new ItemWithDetail
+                            {
+                                ProductId = p.Id,
+                                ProductName = p.Name,
+                                ItemSerial = pI.ItemSerial,
+                                WarehouseTitle = w.Title,
+                                ReckTitle = r.ReckName,
+                                ReckLevel = (int)iS.ReckLevel
+                            }).GroupBy(g => g.WarehouseTitle).Select(s => new ItemsLocationVM { Warehouse = s.Key, ItemDetails = s.ToList() });
 
             var result = getItems.ToPagedList(pageNumber, pageRowSize);
             ViewData["Product"] = _context.Products.Find(productId);
@@ -182,10 +182,10 @@ namespace POSMVC.Controllers
         {
             try
             {
-                ViewData["ProductType"] = new SelectList(await _context.ProductType.Select( p=> new { p.Id, p.TypeName}).ToListAsync(), "Id", "TypeName");
+                ViewData["ProductType"] = new SelectList(await _context.ProductType.Select(p => new { p.Id, p.TypeName }).ToListAsync(), "Id", "TypeName");
                 ViewData["Brand"] = new SelectList(await _context.Brand.Select(b => new { b.Id, b.Name }).ToListAsync(), "Id", "Name");
                 ViewData["Manufacturer"] = new SelectList(await _context.Manufacturer.Select(m => new { m.Id, m.ManufacturerName }).ToListAsync(), "Id", "ManufacturerName");
-              
+
             }
             catch (Exception ex)
             {
@@ -238,9 +238,11 @@ namespace POSMVC.Controllers
             {
                 var getReckItems = from iS in _context.ItemSpace
                                    where iS.WarehouseId == warehouseId && iS.ReckId == item.Id
-                                   join pI in _context.ProductItems on iS.ProductItemId equals pI.Id into tmpProductItem from pI in tmpProductItem.DefaultIfEmpty()
-                                   join p in _context.Products on pI.ProductId  equals p.Id into tmpProduct from p in tmpProduct.DefaultIfEmpty()
-                                  
+                                   join pI in _context.ProductItems on iS.ProductItemId equals pI.Id into tmpProductItem
+                                   from pI in tmpProductItem.DefaultIfEmpty()
+                                   join p in _context.Products on pI.ProductId equals p.Id into tmpProduct
+                                   from p in tmpProduct.DefaultIfEmpty()
+
                                    select new ListOfItem
                                    {
                                        ItemSpace = iS,
@@ -257,6 +259,47 @@ namespace POSMVC.Controllers
             return PartialView("ReckView/_ReckView", recks);
         }
 
+        [HttpGet, ActionName("SingleReckView")]
+        public IActionResult SingleReckView(long reckId)
+        {
+            var result = (dynamic)null;
+          
+            try
+            {
+                var getRecks = _context.Reck.Find(reckId);
+                if (getRecks == null)
+                {
+                    return result = Json(new { success = false, message = "No reck found!", redirectUrl = "" });
+                }
+
+                var getReckItems = from iS in _context.ItemSpace
+                                   where iS.ReckId == reckId
+                                   join pI in _context.ProductItems on iS.ProductItemId equals pI.Id into tmpProductItem
+                                   from pI in tmpProductItem.DefaultIfEmpty()
+                                   join p in _context.Products on pI.ProductId equals p.Id into tmpProduct
+                                   from p in tmpProduct.DefaultIfEmpty()
+
+                                   select new ReckItems
+                                   {
+                                       ItemSpace = iS,
+                                       ProductItems = pI,
+                                       Products = p
+                                   };
+                result = new SingleReckViewVM()
+                {
+                    Reck = getRecks,
+                    ReckItems = getReckItems,
+                    Warehouse = _context.Warehouse.Find(getRecks.WarehouseId)
+                };
+            }
+            catch (Exception ex)
+            {
+                string err = @"Exception occured at Products/SingleReckView: " + ex.ToString();
+                return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+            }
+            return PartialView("ReckView/_SingleReckView", result);
+        }
+
         [HttpGet, ActionName("AddSingleProduct")]
         public IActionResult AddSingleProduct(long ItemSpaceId)
         {
@@ -269,7 +312,8 @@ namespace POSMVC.Controllers
                 return result = Json(new { success = false, message = "Space not available!", redirectUrl = "" });
             }
 
-            var model = new AddSingleProductItemVM() {
+            var model = new AddSingleProductItemVM()
+            {
                 ItemSpace = isSpaceAvailable,
                 Warehouse = _context.Warehouse.Find(isSpaceAvailable.WarehouseId),
                 Reck = reckSetupLocation
@@ -301,7 +345,7 @@ namespace POSMVC.Controllers
                     using (TransactionScope transaction = new TransactionScope(TransactionScopeOption.Required, options))
                     {
                         //Entry No Generate
-                        var getLastEntryNo = _context.ProductInsertion.OrderByDescending(pu => pu.EntryDate).FirstOrDefault();
+                        var getLastEntryNo = _context.ProductInsertion.Where(pu => !pu.EntryNo.Contains("ADJ-")).OrderByDescending(pu => pu.EntryDate).FirstOrDefault();
                         if (getLastEntryNo != null)
                         {
                             int creatEntryNo = Convert.ToInt32(getLastEntryNo.EntryNo.Substring(10)) + 1;
@@ -542,7 +586,7 @@ namespace POSMVC.Controllers
                     using (TransactionScope transaction = new TransactionScope(TransactionScopeOption.Required, options))
                     {
                         //Entry No Generate
-                        var getLastEntryNo = _context.ProductInsertion.OrderByDescending(pu => pu.EntryDate).FirstOrDefault();
+                        var getLastEntryNo = _context.ProductInsertion.Where(pu => !pu.EntryNo.Contains("ADJ-")).OrderByDescending(pu => pu.EntryDate).FirstOrDefault();
                         if (getLastEntryNo != null)
                         {
                             int creatEntryNo = Convert.ToInt32(getLastEntryNo.EntryNo.Substring(10)) + 1;
@@ -647,13 +691,15 @@ namespace POSMVC.Controllers
             {
                 string err = @"Exception occured at Products/InsertProductItem: " + ex.ToString();
                 return result = Json(new { success = false, message = "Operation failed. Contact with system admin.", redirectUrl = "" });
+          
             }
         }
 
         [HttpGet, ActionName("ProductBackToStock")]
         public async Task<IActionResult> ProductBackToStock(long virtualSpaceId)
         {
-            var model = new ProductBackToStockVM(){ 
+            var model = new ProductBackToStockVM()
+            {
                 VirtualSpaceId = virtualSpaceId
             };
 
@@ -677,7 +723,7 @@ namespace POSMVC.Controllers
                         return result = Json(new { success = false, message = "No space available under " + getWarehouseTitle.FirstOrDefault().Title, redirectUrl = "" });
                     }
 
-                    var isVirtualProductAvailable = _context.VirtualSpace.Find(model.VirtualSpaceId);       
+                    var isVirtualProductAvailable = _context.VirtualSpace.Find(model.VirtualSpaceId);
                     if (isVirtualProductAvailable == null)
                     {
                         return result = Json(new { success = false, message = "Virtual Store record is not found!", redirectUrl = "" });
@@ -698,7 +744,7 @@ namespace POSMVC.Controllers
                         productItem.Status = StaticValues.ApplicationStatus.ReturnProduct.ToString();
                         _context.ProductItems.Update(productItem);
                         _context.SaveChanges();
-                        
+
                         //Update Product Item record
                         isVirtualProductAvailable.Status = StaticValues.ApplicationStatus.StockRetrived.ToString();
                         _context.VirtualSpace.Update(isVirtualProductAvailable);
@@ -706,59 +752,59 @@ namespace POSMVC.Controllers
 
                         //Update ItemSpace
                         isSpaceAvailable[0].ProductItemId = productItem.Id;
-                            isSpaceAvailable[0].IsAllocated = true;
-                            isSpaceAvailable[0].LastUpdate = DateTime.UtcNow;
-                            isSpaceAvailable[0].ActionedBy = 0;
-                            _context.ItemSpace.Update(isSpaceAvailable[0]);
+                        isSpaceAvailable[0].IsAllocated = true;
+                        isSpaceAvailable[0].LastUpdate = DateTime.UtcNow;
+                        isSpaceAvailable[0].ActionedBy = 0;
+                        _context.ItemSpace.Update(isSpaceAvailable[0]);
+                        _context.SaveChanges();
+
+                        //Stock Generate one by one while loop is running
+                        var isStockExist = _context.Stock.Where(s => s.ProductId == productItem.ProductId && s.WarehouseId == model.WarehouseId).FirstOrDefault();
+                        if (isStockExist != null)
+                        {
+                            isStockExist.LastQuantity = isStockExist.AvailableQuantity;
+                            isStockExist.AvailableQuantity += 1;
+                            isStockExist.LastUpdate = DateTime.UtcNow;
+
+                            _context.Stock.Update(isStockExist);
                             _context.SaveChanges();
 
-                            //Stock Generate one by one while loop is running
-                            var isStockExist = _context.Stock.Where(s => s.ProductId == productItem.ProductId && s.WarehouseId == model.WarehouseId).FirstOrDefault();
-                            if (isStockExist != null)
+                            _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
                             {
-                                isStockExist.LastQuantity = isStockExist.AvailableQuantity;
-                                isStockExist.AvailableQuantity += 1;
-                                isStockExist.LastUpdate = DateTime.UtcNow;
-
-                                _context.Stock.Update(isStockExist);
-                                _context.SaveChanges();
-
-                                _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
-                                {
-                                    NewQuantity = 1,
-                                    ProductId = (long)productItem.ProductId,
-                                    WarehouseId = model.WarehouseId,
-                                    ReferenecId = model.VirtualSpaceId.ToString(),
-                                    TableReference = "VirtualSpace",
-                                    Note = "Generated From Products/ProductBackToStock"
-                                });
-                            }
-                            else
+                                NewQuantity = 1,
+                                ProductId = (long)productItem.ProductId,
+                                WarehouseId = model.WarehouseId,
+                                ReferenecId = model.VirtualSpaceId.ToString(),
+                                TableReference = "VirtualSpace",
+                                Note = "Generated From Products/ProductBackToStock"
+                            });
+                        }
+                        else
+                        {
+                            var newStock = new Stock()
                             {
-                                var newStock = new Stock()
-                                {
-                                    WarehouseId = model.WarehouseId,
-                                    ProductId = (long)productItem.ProductId,
-                                    AvailableQuantity = 1,
-                                    LastQuantity = 0,
-                                    CreatedDate = DateTime.UtcNow
-                                };
-                                _context.Stock.Add(newStock);
-                                _context.SaveChanges();
+                                WarehouseId = model.WarehouseId,
+                                ProductId = (long)productItem.ProductId,
+                                AvailableQuantity = 1,
+                                LastQuantity = 0,
+                                CreatedDate = DateTime.UtcNow
+                            };
+                            _context.Stock.Add(newStock);
+                            _context.SaveChanges();
 
-                                _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
-                                {
-                                    NewQuantity = 1,
-                                    WarehouseId = model.WarehouseId,
-                                    ProductId = (long)productItem.ProductId,
-                                    ReferenecId = model.VirtualSpaceId.ToString(),
-                                    TableReference = "VirtualSpace",
-                                    Note = "Generated From Products/ProductBackToStock"
-                                });
-                            }
+                            _cmnBusinessFunction.CreateStockTrace(new CreateStockTraceBM()
+                            {
+                                NewQuantity = 1,
+                                WarehouseId = model.WarehouseId,
+                                ProductId = (long)productItem.ProductId,
+                                ReferenecId = model.VirtualSpaceId.ToString(),
+                                TableReference = "VirtualSpace",
+                                Note = "Generated From Products/ProductBackToStock"
+                            });
+                        }
 
                         transaction.Complete();
-                        return result = Json(new { success = true, message = "Product item successfully retrived to selected warehouse.", redirectUrl = @"/Stock/VirtualStore"});
+                        return result = Json(new { success = true, message = "Product item successfully retrived to selected warehouse.", redirectUrl = @"/Stock/VirtualStore" });
                     }
                 }
 
@@ -800,7 +846,8 @@ namespace POSMVC.Controllers
                             newDamageNo = _cmnBusinessFunction.GenerateNumberWithPrefix("DMG-", 1.ToString());
                         }
 
-                        var newDamage = new Damage() { 
+                        var newDamage = new Damage()
+                        {
                             DamageNo = newDamageNo,
                             DamagedDate = DateTime.UtcNow,
                             ProductItemId = fetchVS.ProductItemId,
@@ -948,10 +995,11 @@ namespace POSMVC.Controllers
             var getDamages = from d in _context.Damage
                              join pi in _context.ProductItems on d.ProductItemId equals pi.Id
                              join p in _context.Products on pi.ProductId equals p.Id
-                             select new DamageVM { 
-                                Damage = d,
-                                ProductItems = pi,
-                                Products = p
+                             select new DamageVM
+                             {
+                                 Damage = d,
+                                 ProductItems = pi,
+                                 Products = p
                              };
 
             var result = getDamages.ToPagedList(pageNumber, pageRowSize);
@@ -978,7 +1026,7 @@ namespace POSMVC.Controllers
                     {
                         return result = Json(new { success = false, message = "Please select warehouse.", redirectUrl = @"/Products/damages" });
                     }
-                    
+
                     if (obj.ProductItems.Id <= 0)
                     {
                         return result = Json(new { success = false, message = "Please select product item.", redirectUrl = @"/Products/damages" });
@@ -991,7 +1039,7 @@ namespace POSMVC.Controllers
                     if (isItemAvailable == null)
                     {
                         var getWarehouseTitle = _context.Warehouse.Where(w => w.Id == obj.Warehouse.Id);
-                        return result = Json(new { success = false, message = getProductModel.Name+" ("+getProductItem.ItemSerial + ") item is not found under warehouse " + getWarehouseTitle.FirstOrDefault().Title, redirectUrl = @"/Products/damages" });
+                        return result = Json(new { success = false, message = getProductModel.Name + " (" + getProductItem.ItemSerial + ") item is not found under warehouse " + getWarehouseTitle.FirstOrDefault().Title, redirectUrl = @"/Products/damages" });
                     }
 
                     TransactionOptions options = new TransactionOptions();
@@ -1013,7 +1061,8 @@ namespace POSMVC.Controllers
                         }
 
                         //Damage Insertion
-                        var newDamage = new Damage() {
+                        var newDamage = new Damage()
+                        {
                             DamageNo = newDamageNo,
                             DamagedDate = DateTime.UtcNow,
                             ProductItemId = obj.ProductItems.Id,
@@ -1022,19 +1071,19 @@ namespace POSMVC.Controllers
                         _context.Damage.Add(newDamage);
                         _context.SaveChanges();
 
-                            //Product Item Update
-                            var existProductItem = _context.ProductItems.Find(obj.ProductItems.Id);
-                            existProductItem.Status = StaticValues.ApplicationStatus.Damage.ToString();
-                            _context.ProductItems.Update(existProductItem);
-                            _context.SaveChanges();
+                        //Product Item Update
+                        var existProductItem = _context.ProductItems.Find(obj.ProductItems.Id);
+                        existProductItem.Status = StaticValues.ApplicationStatus.Damage.ToString();
+                        _context.ProductItems.Update(existProductItem);
+                        _context.SaveChanges();
 
-                            //Update ItemSpace
-                            isItemAvailable.ProductItemId = null;
-                            isItemAvailable.IsAllocated = false;
-                            isItemAvailable.LastUpdate = DateTime.UtcNow;
-                            isItemAvailable.ActionedBy = 0;
-                            _context.ItemSpace.Update(isItemAvailable);
-                            _context.SaveChanges();
+                        //Update ItemSpace
+                        isItemAvailable.ProductItemId = null;
+                        isItemAvailable.IsAllocated = false;
+                        isItemAvailable.LastUpdate = DateTime.UtcNow;
+                        isItemAvailable.ActionedBy = 0;
+                        _context.ItemSpace.Update(isItemAvailable);
+                        _context.SaveChanges();
 
                         //Stock Generate only once
                         var isStockExist = _context.Stock.Where(s => s.ProductId == getProductModel.Id && s.WarehouseId == obj.Warehouse.Id).FirstOrDefault();
@@ -1129,14 +1178,15 @@ namespace POSMVC.Controllers
             {
                 var data = JsonConvert.DeserializeObject<int>(jsonData);
                 var result = (dynamic)null;
-                await Task.Run(() => {
+                await Task.Run(() =>
+                {
                     var getProductItems = from iS in _context.ItemSpace
-                                      join pI in _context.ProductItems on iS.ProductItemId equals pI.Id
-                                      join p in _context.Products on pI.ProductId equals p.Id
-                                      join w in _context.Warehouse on iS.WarehouseId equals w.Id
-                                      join r in _context.Reck on iS.ReckId equals r.Id
-                                      where iS.WarehouseId == data
-                                      select new { Id = iS.ProductItemId, Name = p.Name + " ("+pI.ItemSerial+") Reck: "+r.ReckName+" Level: "+iS.ReckLevel };
+                                          join pI in _context.ProductItems on iS.ProductItemId equals pI.Id
+                                          join p in _context.Products on pI.ProductId equals p.Id
+                                          join w in _context.Warehouse on iS.WarehouseId equals w.Id
+                                          join r in _context.Reck on iS.ReckId equals r.Id
+                                          where iS.WarehouseId == data
+                                          select new { Id = iS.ProductItemId, Name = p.Name + " (" + pI.ItemSerial + ") Reck: " + r.ReckName + " Level: " + iS.ReckLevel };
 
                     result = getProductItems;
                 });
@@ -1171,13 +1221,13 @@ namespace POSMVC.Controllers
                 //                    ProductModel =  query.Key,
                 //                    AvailableQuantity = (int)query.Sum(s => s.AvailableQuantity)
                 //               };
-                
+
                 var getStock = from s in _context.Stock
                                join p in _context.Products on s.ProductId equals p.Id
                                group s by p.Name into query
                                select new StockChartVM
-                               { 
-                                   ProductModel = query.Key, 
+                               {
+                                   ProductModel = query.Key,
                                    AvailableQuantity = (int)query.Sum(s => s.AvailableQuantity)
                                };
 

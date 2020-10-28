@@ -1,0 +1,85 @@
+﻿@model WMS.Models.PageModels.ProductVM.ReckView.SingleReckViewVM
+
+@{
+
+}
+
+
+<h5 class="text-center text-info">Warehouse: @Model.Warehouse.Title</h5>
+<div class="h-100">
+    <div class="d-flex align-items-center justify-content-center h-100">
+
+
+
+        @if (Model.ReckItems.Count() <= 0)
+        {
+            <h5 class="text-danger">No Reck Available</h5>
+        }
+        else
+        {
+                <table class="table-bordered table-hover m-2">
+                    @foreach (var innerItem in Model.ReckItems)
+                    {
+                        <tr>
+                            <td class="p-2">Level @innerItem.ItemSpace.ReckLevel</td>
+                            <td class="p-1">
+                                @if (Convert.ToBoolean(innerItem.ItemSpace.IsAllocated))
+                                {
+                                    <b>Model Name:  @innerItem.Products?.Name</b> <br />
+                                    <small> Serial No:  @innerItem.ProductItems?.ItemSerial</small><br />
+                                    <small> Inserted Date:  @innerItem.ItemSpace?.LastUpdate  </small>
+                                }
+                                else
+                                {
+                                    <b class="m-5">
+                                        Empty  <a href="#" onclick='addSingleProduct("mdlAddSingleItem", "addSingleItem", "Products","AddSingleProduct", "?ItemSpaceId=@innerItem.ItemSpace.Id")' class="badge badge-soft-purple">Assign Product</a>
+
+                                    </b>
+                                }
+                            </td>
+
+                        </tr>
+                    }
+                    <tr><td colspan="2"> <h5 class="text-center mt-2">@Model.Reck.ReckName</h5></td> </tr>
+                </table>
+        }
+
+
+
+    </div>
+</div>
+
+
+<div class="modal fade" id="mdlAddSingleItem" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-modal="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title mt-0 font-16" id="myLargeModalLabel">Add Product Item</h5>
+                <button type="button" class="close" onclick='closeModalCreateForm("mdlAddSingleItem","addSingleItem")'>
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="addSingleItem">
+                    <div class="text-center">
+                        <img src="~/ProjectImage/loading.gif" alt="Loading ..." />
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script type="text/javascript">
+    function addSingleProduct(modalId, loadDivId, controller, action, queryString) {
+        $('#' + modalId).modal({
+            backdrop: 'static',
+            keyboard: false,
+            show: true
+        });
+        $('#' + loadDivId).load("/" + controller + "/" + action + queryString);
+    }
+
+</script>

@@ -63,8 +63,8 @@
                             <li class="treeview">
                                 <a href="javascript:void(0)"><i class="zmdi zmdi-city"></i><span class="font-11">WAREHOUSE</span> <i class="fa fa-angle-right"></i></a>
                                 <ul class="treeview-menu">
-                                    <li><a asp-controller="Warehouses" asp-action="Warehouse"> Warehouse</a></li>
-                                    <li><a asp-controller="Warehouses" asp-action="WarehouseCapacity">Warehouse Capacity </a></li>
+                                    <li><a asp-controller="Warehouses" asp-action="Warehouse"> Warehouses</a></li>
+                                    <li><a asp-controller="Warehouses" asp-action="WarehouseCapacity">Warehouse Reck Capacity </a></li>
                                     <li><a asp-controller="Warehouses" asp-action="WarehouseView">Warehouse Design View </a></li>
                                     <li><a asp-controller="Warehouses" asp-action="Reck"> Recks</a></li>
 
@@ -90,7 +90,7 @@
                             <li class="treeview">
                                 <a href="javascript:void(0)"><i class="zmdi zmdi-codepen"></i><span class="font-11">INVENTORY</span> <i class="fa fa-angle-right"></i></a>
                                 <ul class="treeview-menu">
-                                    <li><a asp-controller="Products" asp-action="ProductTypes"> Product Types</a></li>
+                                    <li><a asp-controller="Products" asp-action="ProductTypes"> Categories</a></li>
                                     <li><a asp-controller="Products" asp-action="Products"> Product Models</a></li>
                                     <li><a asp-controller="Products" asp-action="EntryItems">Item Entry </a></li>
                                     <li><a asp-controller="Stock" asp-action="Stock"> Stock</a></li>
@@ -103,20 +103,17 @@
                                 <a href="javascript:void(0)"><i class="zmdi zmdi-collection-bookmark"></i><span class="font-11"> REPORT</span> <i class="fa fa-angle-right"></i></a>
                                 <ul class="treeview-menu">
                                     <li><a asp-controller="Reports" asp-action="GetOrderByDateRange">Order Report</a></li>
-                                    <li><a href="advanced-elements.html">Elements</a></li>
-                                    @*<li><a href="form-validation.html">- Validation</a></li>
-        <li><a href="form-wizard.html">- Form Wizard</a></li>
-        <li><a href="form-input-mask.html">- Input Mask</a></li>
-        <li><a href="file-upload.html">- File upload</a></li>
-        <li><a href="rating.html">- Rating</a></li>*@
+                                    <li><a asp-controller="Reports" asp-action="GetOrderDispatchByDateRange">Order Dispatch Report</a></li>
+                                    <li><a asp-controller="Reports" asp-action="GetOrderReturnByDateRange">Order Return Report</a></li>
                                 </ul>
                             </li>
                             <li class="treeview">
                                 <a href="javascript:void(0)"><i class="zmdi zmdi-settings"></i><span class="font-11">SETTINGS</span> <i class="fa fa-angle-right"></i></a>
                                 <ul class="treeview-menu">
+                                    <li><a asp-controller="Settings" asp-action="CreateDatabaseBackup"> Database Backup</a></li>
                                     <li><a asp-controller="Companies" asp-action="Create"> Company</a></li>
                                     <li><a asp-controller="Brands" asp-action="Brands"> Brands</a></li>
-                                    <li><a asp-controller="Manufacturers" asp-action="Manufacturers"> Manufacturers</a></li>
+                                    <li><a asp-controller="Manufacturers" asp-action="Manufacturers"> Supplier</a></li>
                                 </ul>
                             </li>
                         </ul>

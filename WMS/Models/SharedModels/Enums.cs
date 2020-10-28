@@ -26,22 +26,22 @@ namespace WMS.Models.SharedModels
     {
         public enum ApplicationStatus
         {
-            Submitted = 1,
-            Cancelled,
-            Deleted,
-            [Display(Name = "Full Dispatch")]
-            FullDispatch,
-            [Display(Name = "Partial Dispatch")]
-            PartialDispatch,
-            [Display(Name = "Full Return")]
-            FullReturn,
-            [Display(Name = "Partial Return")]
-            PartialReturn,
-            VirtualStored,
-            StockRetrived,
-            Damage,
-            FreshProduct,
-            ReturnProduct
+            Submitted = 1,                             // 1
+            Cancelled,                                 // 2
+            Deleted,                                   // 3
+            [Display(Name = "Full Dispatch")]          //
+            FullDispatch,                              // 4
+            [Display(Name = "Partial Dispatch")]       //
+            PartialDispatch,                           // 5
+            [Display(Name = "Full Return")]            //
+            FullReturn,                                // 6
+            [Display(Name = "Partial Return")]         //
+            PartialReturn,                             // 7
+            VirtualStored,                             // 8
+            StockRetrived,                             // 9
+            Damage,                                    //10
+            FreshProduct,                              //11
+            ReturnProduct                              //12
         }
     }
 }

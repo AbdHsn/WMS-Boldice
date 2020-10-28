@@ -54,7 +54,10 @@
         var serverData = insertRecordWithReturn("Products", "InsertSingleProductItem", "frmCreateForm", "icoPlaceOrder", "zmdi zmdi-save");
         if (typeof serverData !== 'undefined')
         {
-              viewReck("mdlReckView", "reckView", "Products", "ReckView", "?warehouseId=@Model.Warehouse.Id&row=@Model.Reck.SetupRow&column=@Model.Reck.SetupColumn");
+            @*used for multiple reck view with their items
+              viewReck("mdlReckView", "reckView", "Products", "ReckView", "?warehouseId=@Model.Warehouse.Id&row=@Model.Reck.SetupRow&column=@Model.Reck.SetupColumn");*@
+
+            viewReck("mdlReckView", "reckView", "Products", "SingleReckView", "?reckId=@Model.Reck.Id");
         }
      
     });

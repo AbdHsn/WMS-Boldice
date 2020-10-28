@@ -1,6 +1,6 @@
 ﻿@using X.PagedList.Mvc.Core;
 @using X.PagedList;
-@model WMS.Models.PageModels.ReportsVM.GetOrderByDateRange.GetOrderByDateRange
+@model WMS.Models.PageModels.ReportsVM.GetOrderReturnByDateRange.GetOrderReturnByDateRange
 
 
 @{
@@ -26,10 +26,10 @@
 
                 <div class="row">
                     <div class="col-6">
-                        <h4><u>ORDER REPORT </u> </h4>
+                        <h4><u>ORDER RETURN REPORT </u> </h4>
                     </div>
                     <div class="col-6">
-                        <div class="pull-right">Record Found : @Model.OrdersVM.Count()</div><br />
+                        <div class="pull-right">Record Found : @Model.OrderReturnVM.Count()</div><br />
                         <div class="pull-right">Chosen Date Range: @Model.FromDate.Value.ToString("MMM dd yyyy") To @Model.ToDate.Value.ToString("MMM dd yyyy"), With Status: @Model.Status</div>
                         <div class="pull-right">
                             Printed Date&Time : @DateTime.Now.ToString("dddd, MMM dd yyyy"), @DateTime.Now.ToString("h:mm:ss tt")
@@ -40,48 +40,52 @@
               
 
                 <div class="table-responsive">
-                    <table class="table table-borderless" id="tblOrderReport">
+                    <table class="table table-borderless" id="tblOrderReturnReport">
                         <thead>
                             <tr>
                                 <th>SL</th>
-                                <th>Order No</th>
-                                <th>Order Details</th>
-                                <th>Date of Order</th>
+                                <th>Return & Order No</th>
+                                <th>Return Items</th>
+                                <th>Date of Return</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var item in Model.OrdersVM)
+                            @foreach (var item in Model.OrderReturnVM)
                             {
                                 <tr>
                                     <td width="5%">
-                                        <span class="font-13">@(Model.OrdersVM.IndexOf(item)+1)</span>
+                                        <span class="font-13">@(Model.OrderReturnVM.IndexOf(item) + 1)</span>
                                     </td>
                                     <td width="20%">
-                                        <span class="font-13">@item.Orders.OrderNo</span>
+                                        <div class="font-13">@item.OrderReturn.ReturnNo</div>
+                                        <div class="font-13">@item.Orders.OrderNo</div>
                                     </td>
                                     <td width="40%">
-
-                                        @foreach (var insideItem in item.OrderDetails)
+                                        @{int innerNo = 0;}
+                                        @foreach (var insideItem in item.OrderReturnDetails)
                                         {
+
                                             <span class="text-justify">
-                                                @((item.OrderDetails.IndexOf(insideItem)+1) + ". " + insideItem.Products.Name + " QTY: " + insideItem.OrderDetails.Quantity + " from Warehouse-> " + insideItem.Warehouse.Title)
+                                                @((innerNo+1) + ". " + insideItem.Products.Name + " (" + insideItem.ProductItems.ItemSerial + ")")
                                                 <br />
                                             </span>
+                                            innerNo++;
                                         }
 
                                     </td>
                                     <td width="25%">
-                                        <div>@item.Orders.OrderPlaceDate.Value.ToString("dddd, MMM dd yyyy") at @item.Orders.OrderPlaceDate.Value.ToString("h:mm:ss tt")</div>
-
+                                        <div>@item.OrderReturn.ReturnDate.Value.ToString("dddd, MMM dd yyyy") at @item.OrderReturn.ReturnDate.Value.ToString("h:mm:ss tt")</div>
                                     </td>
                                     <td width="10%">
-                                        <span class="font-13">@item.Orders.OrderStatus</span>
+                                        <span class="font-13">@item.OrderReturn.Status</span>
                                     </td>
                                 </tr>
                             }
+
                         </tbody>
                     </table>
+
                 </div>
 
                 </div>

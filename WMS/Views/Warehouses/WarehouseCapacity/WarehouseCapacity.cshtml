@@ -1,6 +1,6 @@
 ﻿@using X.PagedList.Mvc.Core;
 @using X.PagedList;
-@model IEnumerable<WMS.Models.PageModels.WarehouseVM.ListWarehouseCapasityVM>
+@model IEnumerable<WMS.Models.PageModels.WarehouseVM.WarehouseCapacityVM.WarehouseCapacityVM>
 
 @{
     ViewData["Title"] = "Warehouse Capacity";
@@ -15,11 +15,11 @@
             <div class="card mb-30">
                 <div class="card-body pb-0">
                     <div class="justify-content-between align-items-center mb-20">
-                        <h6 class="card-title mb-0">Warehouse Capacity Defining List</h6>
+                        <h6 class="card-title mb-0">Warehouse Reck Capacities</h6>
                         <br />
                         <div class="row">
                             <div class="col-md-6">
-                                <button type="button" class="btn btn-sm btn-outline-success" onclick='openModalCreateForm("mdlCreateForm", "CreateForm","Warehouses","CreateWarehouseCapacity")'><i class="zmdi zmdi-collection-plus"></i> New Warehouse Capasity </button>
+                                <button type="button" class="btn btn-sm btn-outline-success" onclick='openModalCreateForm("mdlCreateForm", "CreateForm","Warehouses","CreateWarehouseCapacity")'><i class="zmdi zmdi-collection-plus"></i> Create New </button>
                             </div>
                         </div>
                     </div>
@@ -28,52 +28,60 @@
                     {
                         <div class="text-center">
                             <span class="badge font-11 badge-soft-purple"> There is no record found</span>
-
                         </div>
                     }
                     else
                     {
-                        <div class="table-responsive order-stats">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Warehouse Title</th>
-                                        <th>Total Row\Column</th>
-                                        <th>Total assignable reck on each of row\column</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @{int index = 1;}
-                                    @foreach (var item in Model)
-                                    {
-                                        <tr>
-                                            <td width="10%">
-                                                <span>@index</span>
-                                            </td>
-                                            <td width="25%">
-                                                <span>@item.Warehouse.Title</span>
-                                            </td>
-                                            <td width="20%">
-                                                <div class="row">
-                                                    <span>  @item.WarehouseCapacity.Row \ @item.WarehouseCapacity.Column</span>
-                                                </div>
-                                            </td>
-                                            <td width="35%">
-                                                <span>@item.WarehouseCapacity.ReckQuantity</span>
-                                            </td>
-                                            <td width="10%">
-                                                <a href="#" class="mr-2" data-toggle="tooltip" title="" data-original-title="Update Info" onclick='openModalUpdateForm("mdlUpdateForm", "UpdateForm", "Warehouses","EditWarehouseCapasity", "?id=@item.WarehouseCapacity.Id")'><i class="fa fa-edit text-info font-18"></i></a>
-                                                <a href="#" data-toggle="tooltip" title="" data-original-title="Delete" onclick='deleteConfirmation({id: @item.WarehouseCapacity.Id}, "Selected Warehouse Capasity?", "Warehouses", "DeleteWarehouseCapasity")'><i class="fa fa-trash text-danger font-18"></i></a>
-                                            </td>
-                                        </tr>
-                                        { index++; }
-                                    }
+                        foreach (var item in Model)
+                        {
+                            <div class="row bg-light">
+                                <div class="col-md-6 col-sm-12">
+                                    <h5 class="m-0">@item.Warehouse.Title</h5>
+                                </div>
+                                <div class="col-md-6 col-sm-12">
+                                    <label class="m-0 pt-1">Available Design: @item.WarehouseCapacity.Count()</label>
+                                </div>
+                            </div>
 
-                                </tbody>
-                            </table>
-                        </div>
+                            <div class="table-responsive order-stats">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Total Row\Column</th>
+                                            <th>Total assignable reck on each of row\column</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @{int index = 1;}
+                                        @foreach (var insideCapacity in item.WarehouseCapacity)
+                                        {
+                                            <tr>
+                                                <td width="10%">
+                                                    <span>@index</span>
+                                                </td>
+
+                                                <td width="35%">
+                                                  
+                                                        <span>  @insideCapacity.Row \ @insideCapacity.Column</span>
+                                                    
+                                                </td>
+                                                <td width="45%">
+                                                    <span>@insideCapacity.ReckQuantity</span>
+                                                </td>
+                                                <td width="10%">
+                                                    @*<a href="#" class="mr-2" data-toggle="tooltip" title="" data-original-title="Update Info" onclick='openModalUpdateForm("mdlUpdateForm", "UpdateForm", "Warehouses","EditWarehouseCapasity", "?id=@item.WarehouseCapacity.Id")'><i class="fa fa-edit text-info font-18"></i></a>*@
+                                                    <a href="#" data-toggle="tooltip" title="" data-original-title="Delete" onclick='deleteConfirmation({id: @insideCapacity.Id}, "Selected Warehouse Capasity?", "Warehouses", "DeleteWarehouseCapasity")'><i class="fa fa-trash text-danger font-18"></i></a>
+                                                </td>
+                                            </tr>
+                                            { index++; }
+                                        }
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
                         <div class="form-group pull-right">
                             @Html.PagedListPager((IPagedList)Model, page => Url.Action("WarehouseCapasity", new { page = page }),
                            new X.PagedList.Mvc.Common.PagedListRenderOptionsBase
@@ -98,7 +106,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title mt-0 font-16" id="myLargeModalLabel">Define New Capacity</h5>
+                    <h5 class="modal-title mt-0 font-16" id="myLargeModalLabel">New Reck Capacity of Warehouse</h5>
                     <button type="button" class="close" onclick='closeModalCreateForm("mdlCreateForm","CreateForm")'>
                         <span aria-hidden="true">×</span>
                     </button>

@@ -1,0 +1,28 @@
+﻿@{
+    ViewData["Title"] = "Backup Database";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-30">
+                <div class="card-body pb-0">          
+                    <div class="text-center pb-3" id="ready">
+                        <label class="font-weight-bold text-success">Database backup is ready to download</label><br />
+                        <a asp-controller="Settings" asp-action="DownloadDatabaseBackup"> Download </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts{
+
+    <script type="text/javascript">
+
+    </script>
+}
+
