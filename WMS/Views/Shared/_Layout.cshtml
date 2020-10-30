@@ -65,8 +65,8 @@
                                 <ul class="treeview-menu">
                                     <li><a asp-controller="Warehouses" asp-action="Warehouse"> Warehouses</a></li>
                                     <li><a asp-controller="Warehouses" asp-action="WarehouseCapacity">Warehouse Reck Capacity </a></li>
-                                    <li><a asp-controller="Warehouses" asp-action="WarehouseView">Warehouse Design View </a></li>
-                                    <li><a asp-controller="Warehouses" asp-action="Reck"> Recks</a></li>
+                                    <li><a asp-controller="Warehouses" asp-action="WarehouseView">Warehouse Recks </a></li>
+                                    @*<li><a asp-controller="Warehouses" asp-action="Reck"> Recks</a></li>*@
 
                                 </ul>
                             </li>
@@ -83,7 +83,8 @@
                             <li class="treeview">
                                 <a href="javascript:void(0)"><i class="zmdi zmdi-accounts-outline"></i> <span class="font-11">PEOPLES</span> <i class="fa fa-angle-right"></i></a>
                                 <ul class="treeview-menu">
-                                    <li><a asp-controller="Users" asp-action="Customers">- Users</a></li>
+                                    <li><a asp-controller="Users" asp-action="Customers"> Customers</a></li>
+                                    <li><a asp-controller="Users" asp-action="Users"> Users</a></li>
                                 </ul>
                             </li>
 
@@ -114,6 +115,7 @@
                                     <li><a asp-controller="Companies" asp-action="Create"> Company</a></li>
                                     <li><a asp-controller="Brands" asp-action="Brands"> Brands</a></li>
                                     <li><a asp-controller="Manufacturers" asp-action="Manufacturers"> Supplier</a></li>
+                                    <li><a asp-controller="Settings" asp-action="AssignUserRole"> Assign Role</a></li>
                                 </ul>
                             </li>
                         </ul>
@@ -387,24 +389,24 @@
         <script src="~/js/bundle.js"></script>
         <script src="~/js/default-assets/setting.js"></script>
         <script src="~/js/default-assets/fullscreen.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js"></script>
+
 
         <!-- Active JS -->
         <script src="~/js/default-assets/active.js"></script>
 
         <!-- These plugins only need for the run this page -->
 
-        <script src="~/js/default-assets/apexchart.min.js"></script>
         <script src="~/js/default-assets/dashboard-active.js"></script>
+        <script src="~/js/default-assets/apexchart.min.js"></script>
         <!-- #endregion -->
         <!-- #region Validation Js -->
-
-        <script src="~/js/jquery-validate/jquery.validate.min.js"></script>
-        <script src="~/js/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+        <script src="~/js/jquery-validate/jquery.validate.js"></script>
+        <script src="~/js/jquery-validation-unobtrusive/jquery.validate.unobtrusive.js"></script>
         <!-- #endregion -->
         <!-- #region CustomJs -->
         <script src="~/js/sweetalert.min.js"></script>
         <script src="~/js/CustomJavaScript.js"></script>
-        <!-- #endregion -->
     </environment>
 
     @RenderSection("Scripts", required: false)

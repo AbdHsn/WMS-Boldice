@@ -1,6 +1,6 @@
 ﻿@using X.PagedList.Mvc.Core;
 @using X.PagedList;
-@model IEnumerable<WMS.Models.PageModels.UsersVM.ListCustomer>
+@model IEnumerable<WMS.Models.PageModels.UsersVM.ListUser>
 
 
 @{
@@ -18,11 +18,11 @@
             <div class="card mb-30">
                 <div class="card-body pb-0">
                     <div class="justify-content-between align-items-center mb-20">
-                        <h6 class="card-title mb-0">Customers</h6>
+                        <h6 class="card-title mb-0">User Records</h6>
                         <br />
                         <div class="row">
                             <div class="col-md-6">
-                                <button type="button" class="btn btn-sm btn-outline-success" onclick='openModalCreateForm("mdlCreateForm", "CreateForm","Users","CreateCustomer")'><i class="zmdi zmdi-collection-plus"></i> New Customers </button>
+                                <button type="button" class="btn btn-sm btn-outline-success" onclick='openModalCreateForm("mdlCreateForm", "CreateForm","Users","CreateUser")'><i class="zmdi zmdi-collection-plus"></i> New User </button>
                             </div>
                             <div class="col-md-6 float-right">
                                 <div class="input-group">
@@ -31,10 +31,10 @@
                                     <div class="btn-group mb-2 pr-2">
                                         <button type="button" class="btn btn-sm btn-fill-default  dropdown-toggle" data-toggle="dropdown" aria-expanded="false" style="height:40px;">View As : @selectedUserTypeName</button>
                                         <div class="dropdown-menu">
-                                            <a class="dropdown-item @(selectedUserTypeName == "All" ? "disabled" : "")" href="/Users/Customers?page=1&ddlId=0">All</a>
+                                            <a class="dropdown-item @(selectedUserTypeName == "All" ? "disabled" : "")" href="/Users/Users?page=1&ddlId=0">All</a>
                                             @foreach (var item in userTypes)
                                             {
-                                                <a class="dropdown-item @(string.Equals(selectedUserTypeName, item.Text) ? "disabled" : "")" href="/Users/Customers?page=1&ddlId=@item.Value">@item.Text</a>
+                                                <a class="dropdown-item @(string.Equals(selectedUserTypeName, item.Text) ? "disabled" : "")" href="/Users/Users?page=1&ddlId=@item.Value">@item.Text</a>
                                             }
                                         </div>
                                     </div>
@@ -57,7 +57,7 @@
                             <table class="table">
                                 <thead>
                                     <tr>
-                                        <th>Customer</th>
+                                        <th>User</th>
                                         <th>Address</th>
                                         <th></th>
                                     </tr>
@@ -93,9 +93,8 @@
                                                 </div>
                                             </td>
                                             <td width="10%">
-                                                <a href="#" class="mr-2" data-toggle="tooltip" title="" data-original-title="View History"><i class="fa fa-history text-success font-18"></i></a>
-                                                <a href="#" class="mr-2" data-toggle="tooltip" title="" data-original-title="Update Info" onclick='openModalUpdateForm("mdlUpdateForm", "UpdateForm", "Users","EditCustomer", "?id=@item.User.Id")'><i class="fa fa-edit text-info font-18"></i></a>
-                                                <a href="#" data-toggle="tooltip" title="" data-original-title="Delete" onclick='deleteConfirmation({id: @item.User.Id}, "@item.User.FirstName @item.User.LastName", "Users", "DeleteCustomer")'><i class="fa fa-trash text-danger font-18"></i></a>
+                                                <a href="#" class="mr-2" data-toggle="tooltip" title="" data-original-title="Update Info" onclick='openModalUpdateForm("mdlUpdateForm", "UpdateForm", "Users","EditUser", "?id=@item.User.Id")'><i class="fa fa-edit text-info font-18"></i></a>
+                                                <a href="#" data-toggle="tooltip" title="" data-original-title="Delete" onclick='deleteConfirmation({id: @item.User.Id}, "@item.User.FirstName @item.User.LastName", "Users", "DeleteUser")'><i class="fa fa-trash text-danger font-18"></i></a>
                                             </td>
                                         </tr>
                                     }
@@ -127,7 +126,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title mt-0 font-16" id="myLargeModalLabel">Add New Customer</h5>
+                    <h5 class="modal-title mt-0 font-16" id="myLargeModalLabel">Add New User</h5>
                     <button type="button" class="close" onclick='closeModalCreateForm("mdlCreateForm","CreateForm")'>
                         <span aria-hidden="true">×</span>
                     </button>
@@ -147,7 +146,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title mt-0 font-16" id="myLargeModalLabel">Update Customer</h5>
+                    <h5 class="modal-title mt-0 font-16" id="myLargeModalLabel">Update User</h5>
                     <button type="button" class="close" onclick='closeModalUpdateForm("mdlUpdateForm","UpdateForm")'>
                         <span aria-hidden="true">×</span>
                     </button>
@@ -178,9 +177,9 @@
 
             $('#searchCustomer').autocomplete({
                 minLength: 2,
-                source: '/Users/CustomerSearch',
+                source: '/Users/UserSearch',
                 select: function (event, ui) {
-                    window.location.href = "/Users/SearchResult?mobile=" + ui.item.label;
+                    window.location.href = "/Users/UserSearchResult?mobile=" + ui.item.label;
                 }
             });
 

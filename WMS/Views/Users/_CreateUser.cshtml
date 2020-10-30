@@ -1,4 +1,4 @@
-﻿@model WMS.Models.PageModels.UsersVM.CreateCustomerVM
+﻿@model WMS.Models.PageModels.UsersVM.CreateUserVM
 
 <div class="col-md-12">
     <form enctype="multipart/form-data" id="frmCreateCustomer">
@@ -68,7 +68,7 @@
                     <br />
                     <br />
                     <hr />
-                    <button type="button" class="btn btn-sm btn-outline-success" style="width:150px" onclick='insertRecord("Users", "CreateCustomer", "frmCreateCustomer")'> <i class="zmdi zmdi-save"></i> Save</button>
+                    <button type="button" class="btn btn-sm btn-outline-success" style="width:150px" onclick='insertRecord("Users", "CreateUser", "frmCreateCustomer")'> <i class="zmdi zmdi-save"></i> Save</button>
                     <button type="button" class="btn btn-sm btn-outline-danger" style="width:150px" onclick='closeModalCreateForm("mdlCreateForm","CreateForm")'><i class="zmdi zmdi-close"></i> Cancel</button>
                 </div>
             </div>
@@ -78,25 +78,5 @@
 
 <script src="~/js/bootstrap-datepicker.min.js"></script>
 <script type="text/javascript">
-
-    $('#ProductId').selectpicker({
-        liveSearch: true,
-        maxOptions: 1
-    });
-
-    $('#SupplierId').selectpicker({
-        liveSearch: true,
-        maxOptions: 1
-    });
-
-    $('#Quantity').on("change", () => {
-
-
-        priceRate = $('#PriceRate').val();
-        quantity = $('#Quantity').val();
-        var totalAmount = priceRate * quantity;
-        $('#FinalTotal').val(totalAmount);
-
-    })
 
 </script>

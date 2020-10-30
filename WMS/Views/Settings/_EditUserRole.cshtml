@@ -1,0 +1,74 @@
+﻿@model WMS.Models.PageModels.SettingsVM.EditUserRoleVM
+
+
+@{
+    string msg = (string)ViewBag.msg;
+}
+
+@if (!string.IsNullOrEmpty(msg))
+{
+    <h5 class="text-danger">@msg</h5>
+}
+else
+{
+    <div class="col-md-12">
+        <form enctype="multipart/form-data" id="frmUpdate">
+            <div class="row">
+                <input type="hidden" value="@Model.Users.Id" class="form-control" />
+                <div class="col-md-12">
+                    <div class="form-group pt-4">
+                        <label class="control-label">Assigned Accessible Roles: </label>
+                        @if (Model.ListAuthorization.Count() > 0)
+                        {
+                            @foreach (var insideAuthorization in Model.ListAuthorization)
+                            {
+                                <span class="badge font-11 badge-soft-primary justify-content-center">
+                                    @insideAuthorization.AuthorizeType.TypeName
+                                </span>
+                            }
+                        }
+                        else
+                        {
+                            <span class="badge font-11 badge-soft-danger">
+                                No Role Assigned
+                            </span>
+                        }
+                    </div>
+
+                </div>
+                <div class="col-md-12">
+
+                    <div class="form-group pt-4">
+                        <label class="control-label">Select New Roles For Access Level*</label>
+                        <select name="AuthorizationTypeId[]" id="tokens" class="selectpicker form-control" required multiple data-live-search="true" title="Select New Roles" asp-items="ViewBag.AuthorizationType">
+                        </select>
+                    </div>
+                </div>
+
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group right-align">
+                        <br />
+                        <br />
+                        <hr />
+                        <button type="button" class="btn btn-sm btn-outline-success" style="width:150px" onclick='insertRecord("Settings", "EditUserRole", "frmUpdate")'> <i class="zmdi zmdi-save"></i> Save</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" style="width:150px" onclick='closeModalCreateForm("mdlUpdateForm","UpdateForm")'><i class="zmdi zmdi-close"></i> Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+}
+
+<script src="~/js/searchable-dropdown/bootstrap-select.js"></script>
+<script type="text/javascript">
+    //Use For Dropdown Search
+    $('.selectpicker').selectpicker({
+        liveSearch: true,
+        maxOptions: 1
+    });
+</script>
+
+
