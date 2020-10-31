@@ -17,6 +17,7 @@
 
         <!-- #endregion -->
         <!-- #region Custom CSS -->
+        <link href="~/css/jquery.tagselect/jquery.tagselect.css" rel="stylesheet" />
         <link href="~/css/searchable-dropdown/bootstrap-select.css" rel="stylesheet" />
         <link href="~/css/CustomStyle.css" rel="stylesheet" />
         <!-- #endregion -->
@@ -28,10 +29,12 @@
         <link href="~/style.css" rel="stylesheet" />
         <link href="~/css/jquery-ui-autocomplete.css" rel="stylesheet" />
         <link href="~/css/sweetalert.css" rel="stylesheet" />
+        <link href="~/css/bootstrap-datepicker.min.css" rel="stylesheet" />
 
         <!-- #endregion -->
         <!-- #region Custom CSS -->
-        <link href="~/css/searchable-dropdown/bootstrap-select.min.css" rel="stylesheet" />
+        <link href="~/css/jquery.tagselect/jquery.tagselect.css" rel="stylesheet" />
+        <link href="~/css/searchable-dropdown/bootstrap-select.css" rel="stylesheet" />
         <link href="~/css/CustomStyle.css" rel="stylesheet" />
         <!-- #endregion -->
     </environment>
@@ -84,7 +87,7 @@
                                 <a href="javascript:void(0)"><i class="zmdi zmdi-accounts-outline"></i> <span class="font-11">PEOPLES</span> <i class="fa fa-angle-right"></i></a>
                                 <ul class="treeview-menu">
                                     <li><a asp-controller="Users" asp-action="Customers"> Customers</a></li>
-                                    <li><a asp-controller="Users" asp-action="Users"> Users</a></li>
+                                    <li><a asp-controller="Users" asp-action="Users"> User Registrations</a></li>
                                 </ul>
                             </li>
 
@@ -115,7 +118,7 @@
                                     <li><a asp-controller="Companies" asp-action="Create"> Company</a></li>
                                     <li><a asp-controller="Brands" asp-action="Brands"> Brands</a></li>
                                     <li><a asp-controller="Manufacturers" asp-action="Manufacturers"> Supplier</a></li>
-                                    <li><a asp-controller="Settings" asp-action="AssignUserRole"> Assign Role</a></li>
+                                    <li><a asp-controller="Settings" asp-action="AssignUserRole"> User Permissions</a></li>
                                 </ul>
                             </li>
                         </ul>
@@ -373,6 +376,7 @@
         <script src="~/js/jquery-validation-unobtrusive/jquery.validate.unobtrusive.js"></script>
         <!-- #endregion -->
         <!-- #region CustomJs -->
+        <script src="~/js/searchable-dropdown/bootstrap-select.js"></script>
         <script src="~/js/sweetalert.min.js"></script>
         <script src="~/js/CustomJavaScript.js"></script>
         <!-- #endregion -->
@@ -405,6 +409,7 @@
         <script src="~/js/jquery-validation-unobtrusive/jquery.validate.unobtrusive.js"></script>
         <!-- #endregion -->
         <!-- #region CustomJs -->
+        <script src="~/js/searchable-dropdown/bootstrap-select.js"></script>
         <script src="~/js/sweetalert.min.js"></script>
         <script src="~/js/CustomJavaScript.js"></script>
     </environment>

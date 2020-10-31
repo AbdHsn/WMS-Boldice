@@ -3,6 +3,7 @@
 
 @{
     string msg = (string)ViewBag.msg;
+    var authorizationTypes = (SelectList)ViewBag.AuthorizationType;
 }
 
 @if (!string.IsNullOrEmpty(msg))
@@ -14,10 +15,11 @@ else
     <div class="col-md-12">
         <form enctype="multipart/form-data" id="frmUpdate">
             <div class="row">
-                <input type="hidden" value="@Model.Users.Id" class="form-control" />
+                <input type="hidden" name="Users.Id" value="@Model.Users.Id" class="form-control" />
                 <div class="col-md-12">
                     <div class="form-group pt-4">
-                        <label class="control-label">Assigned Accessible Roles: </label>
+                        <label class="control-label">Previous assigned roles: </label>
+                        <br />
                         @if (Model.ListAuthorization.Count() > 0)
                         {
                             @foreach (var insideAuthorization in Model.ListAuthorization)
@@ -38,10 +40,23 @@ else
                 </div>
                 <div class="col-md-12">
 
-                    <div class="form-group pt-4">
-                        <label class="control-label">Select New Roles For Access Level*</label>
-                        <select name="AuthorizationTypeId[]" id="tokens" class="selectpicker form-control" required multiple data-live-search="true" title="Select New Roles" asp-items="ViewBag.AuthorizationType">
+                    <div class="form-group">
+                        <label class="control-label">Choose roles</label>
+                        <select name="AuthorizationTypeId[]" class="selectpicker show-menu-arrow form-control" required multiple data-live-search="true">
+                            @foreach (var item in authorizationTypes)
+                            {
+                                if (Model.ListAuthorization.Where(f => f.AuthorizeType.Id.ToString() == item.Value).Count() > 0)
+                                {
+                                    <option value="@item.Value" disabled>@item.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+
+                            }
                         </select>
+
                     </div>
                 </div>
 
@@ -62,12 +77,10 @@ else
 
 }
 
-<script src="~/js/searchable-dropdown/bootstrap-select.js"></script>
 <script type="text/javascript">
     //Use For Dropdown Search
     $('.selectpicker').selectpicker({
-        liveSearch: true,
-        maxOptions: 1
+        liveSearch: true
     });
 </script>
 

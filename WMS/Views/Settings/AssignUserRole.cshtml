@@ -18,11 +18,11 @@
             <div class="card mb-30">
                 <div class="card-body pb-0">
                     <div class="justify-content-between align-items-center mb-20">
-                        <h6 class="card-title mb-0">User Records</h6>
+                        <h6 class="card-title mb-0">Grant User Permission</h6>
                         <br />
                         <div class="row">
                             <div class="col-md-6">
-                                <button type="button" class="btn btn-sm btn-outline-success" onclick='openModalCreateForm("mdlCreateForm", "CreateForm","Users","CreateUser")'><i class="zmdi zmdi-collection-plus"></i> New User </button>
+                                @*<button type="button" class="btn btn-sm btn-outline-success" onclick='openModalCreateForm("mdlCreateForm", "CreateForm","Users","CreateUser")'><i class="zmdi zmdi-collection-plus"></i> New User </button>*@
                             </div>
                             <div class="col-md-6 float-right">
                                 @*<div class="input-group">
@@ -58,7 +58,7 @@
                                 <thead>
                                     <tr>
                                         <th>User Details</th>
-                                        <th>Assigned Role</th>
+                                        <th>Assigned Roles</th>
                                         <th></th>
                                     </tr>
                                 </thead>
@@ -69,8 +69,9 @@
                                             <td width="35%">
                                                 <span class="font-15">@item.Users.FirstName @item.Users.LastName</span>
                                                 <div class="mb-10">
+                                                    User Type:
                                                     <span class="badge font-11 badge-soft-purple">
-                                                        Type: @item.UserType.TypeName
+                                                        @item.UserType.TypeName
                                                     </span>
 
                                                 </div>

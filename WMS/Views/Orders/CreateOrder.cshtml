@@ -130,9 +130,7 @@
 </div>
 
 @section Scripts{
-    <script src="~/js/pdf-make/js/pdfmake.js"></script>
-    <script src="~/js/pdf-make/js/vfs_fonts.js"></script>
-    <script src="~/js/searchable-dropdown/bootstrap-select.js"></script>
+    
     <script type="text/javascript">
         //All Global Variables
         var lstItems = new Array();
@@ -335,20 +333,6 @@
 
             insertRecordWithoutForm("Orders", "CreateOrders", modelObject, "icoPlaceOrder", "zmdi zmdi-check");
         });
-
-        $('#btnPrint').on("click", () => {
-
-            var serverData = getJsonData("Orders", "pdf", null, 'GET');
-            console.log(serverData);
-
-            var docDefinition = {
-                content:["Helloo..."]
-            }
-
-            pdfMake.createPdf(docDefinition).download();
-
-        });
-
 
     </script>
 
