@@ -17,7 +17,6 @@
 
         <!-- #endregion -->
         <!-- #region Custom CSS -->
-        <link href="~/css/jquery.tagselect/jquery.tagselect.css" rel="stylesheet" />
         <link href="~/css/searchable-dropdown/bootstrap-select.css" rel="stylesheet" />
         <link href="~/css/CustomStyle.css" rel="stylesheet" />
         <!-- #endregion -->
@@ -33,7 +32,6 @@
 
         <!-- #endregion -->
         <!-- #region Custom CSS -->
-        <link href="~/css/jquery.tagselect/jquery.tagselect.css" rel="stylesheet" />
         <link href="~/css/searchable-dropdown/bootstrap-select.css" rel="stylesheet" />
         <link href="~/css/CustomStyle.css" rel="stylesheet" />
         <!-- #endregion -->
@@ -43,14 +41,15 @@
 </head>
 <body>
     <!-- ======================================
-    ******* Page Wrapper Area Start **********
+    ******* Dashboard Wrapper Area Start **********
     ======================================= -->
     <div class="ecaps-page-wrapper">
         <!-- Sidemenu Area -->
         <div class="ecaps-sidemenu-area">
             <!-- Desktop Logo -->
             <div class="ecaps-logo">
-                <a asp-controller="Home" asp-action="Index"><img src="/img/core-img/small-logo.png" alt="Logo">
+                <a asp-controller="Home" asp-action="Home">
+                    <img src="/img/core-img/small-logo.png" alt="Logo">
                 </a>
             </div>
 
@@ -62,7 +61,7 @@
                     <nav>
                         <ul class="sidebar-menu" data-widget="tree">
 
-                            <li><a asp-controller="Home" asp-action="Index"><i class="zmdi zmdi-home"></i> <span class="font-11">HOME</span></a></li>
+                            <li><a asp-controller="Home" asp-action="Dashboard"><i class="zmdi zmdi-home"></i> <span class="font-11">Dashboard</span></a></li>
                             <li class="treeview">
                                 <a href="javascript:void(0)"><i class="zmdi zmdi-city"></i><span class="font-11">WAREHOUSE</span> <i class="fa fa-angle-right"></i></a>
                                 <ul class="treeview-menu">
@@ -319,35 +318,36 @@
             </header>
 
             <!-- Main Content Area -->
-            <div class="main-content" style="min-height:10000px">
+            <div class="main-content">
+                    @RenderBody()
 
-                @RenderBody()
-                <!-- Footer Area -->
-                <div class="container-fluid" >
-                    <div class="row">
-                        <div class="col-12">
-                            <!-- Footer Area -->
-                            <footer class="footer-area d-flex align-items-center flex-wrap">
-                                <!-- Copywrite Text -->
-                                <div class="copywrite-text">
-                                    <p>Developed by <a href="#">&copy; Abdullah Bin Hasan</a></p>
-                                </div>
-                                <!-- Footer Nav -->
-                                <ul class="footer-nav d-flex align-items-center">
-                                    <li><a href="#">About</a></li>
-                                    <li><a href="#">Privacy</a></li>
-                                </ul>
-                            </footer>
+                    <!-- Footer Area -->
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-12">
+                                <!-- Footer Area -->
+                                <footer class="footer-area d-flex align-items-center flex-wrap">
+                                    <!-- Copywrite Text -->
+                                    <div class="copywrite-text">
+                                        <p>Developed by <a href="#">&copy; Abdullah Bin Hasan</a></p>
+                                    </div>
+                                    <!-- Footer Nav -->
+                                    <ul class="footer-nav d-flex align-items-center">
+                                        <li><a href="#">About</a></li>
+                                        <li><a href="#">Privacy</a></li>
+                                    </ul>
+                                </footer>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
     </div>
 
     <!-- ======================================
-    ********* Page Wrapper Area End ***********
+    ********* Dashboard Wrapper Area End ***********
     ======================================= -->
+
     <environment include="Development">
 
         <!-- #region Templete Preferred JS -->

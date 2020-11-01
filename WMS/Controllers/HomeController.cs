@@ -40,7 +40,12 @@ namespace WMS.Controllers
         }
         #endregion
 
-        public IActionResult Index()
+        public IActionResult Home()
+        {
+            return View();
+        }
+        
+        public IActionResult Dashboard()
         {
             var countOfOrderActionNeed = _context.Orders.Where(o => o.OrderStatus == StaticValues.ApplicationStatus.Submitted.ToString()).Count();
 

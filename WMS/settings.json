@@ -8,7 +8,7 @@
     //Local MS SQL
     "DefaultConnection": "Server=AbdHsn-Laptop;Database=WMSDB;User ID=AbdHsn-dbms; Password=123123"
     //Online DB String
-    //"DefaultConnection": "Data Source=SQL5092.site4now.net;Initial Catalog=DB_A69A86_WMSDB;User Id=DB_A69A86_WMSDB_admin;Password="
+    //"DefaultConnection": "Data Source=SQL5092.site4now.net;Initial Catalog=DB_A69A86_WMSDB;User Id=DB_A69A86_WMSDB_admin;Password=O181905021o"
 
     // Offline DB String
     // "connection": "Data Source=(LocalDB)\\MSSQLLocalDB;AttachDbFilename=%root%\\_Database\\WMSDB.mdf;Integrated Security=True;Connect Timeout=30",
