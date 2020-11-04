@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using CommonLogics;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using SQLitePCL;
@@ -40,6 +41,7 @@ namespace WMS.Controllers
         }
         #endregion
 
+        [AllowAnonymous]
         public IActionResult Home()
         {
             return View();

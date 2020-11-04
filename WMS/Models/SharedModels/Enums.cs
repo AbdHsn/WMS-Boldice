@@ -43,5 +43,13 @@ namespace WMS.Models.SharedModels
             FreshProduct,                              //11
             ReturnProduct                              //12
         }
+
+        public enum UserTypes
+        {
+            SuperAdmin = 1,                             // 1
+            Admin,                                 // 2
+            Employee,                                   // 3
+            Customer                             // 4
+        }
     }
 }

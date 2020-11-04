@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CommonLogics;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,25 +38,30 @@ namespace WMS
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            //services.AddMvc(option =>
-            //{
-            //    option.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
-            //    var policy = new AuthorizationPolicyBuilder()
-            //    .RequireAuthenticatedUser()
-            //    .Build();
-            //    option.Filters.Add(new AuthorizeFilter(policy));
-            //}).SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.AddMvc(option =>
+            {
+                option.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+                var policy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .Build();
+                option.Filters.Add(new AuthorizeFilter(policy));
+               // option.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
 
-            //services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-            //    .AddCookie(option =>
-            //    {
-            //        option.AccessDeniedPath = "/Accounts/Denied";
-            //        option.LoginPath = "/Accounts/NotLogIn";
-            //    });
+            }).SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+
+            services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(option =>
+                {
+                    option.AccessDeniedPath = "/Settings/Denied";
+                    option.LoginPath = "/Settings/NotLogIn";
+                });
 
 
-            services.AddMvc().AddJsonOptions(option =>
-            option.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
+            //services.AddMvc().AddJsonOptions(option =>
+            //                option.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore
+            //);
+
+
             services.AddOptions();
             services.Configure <Settings>(Configuration.GetSection("ConnectionStrings"));
             services.AddScoped<CommonFunctions>();
@@ -105,21 +113,44 @@ namespace WMS
             }
             #endregion Technical MiddleWare
 
-            app.UseStaticFiles();
+
+            #region Security MiddleWare
+            //[Note: Not Working. (Investigation needed.)]
+            //app.UseForwardedHeaders(new ForwardedHeadersOptions
+            //{
+            //    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            //});
+            //[~Note: Not Working. (Investigation needed.)]
             app.UseHttpsRedirection();
+            app.Use(async (context, next) =>
+            {
+                context.Response.Headers.Add("X-Frame-Options", "SAMEORIGIN");
+                await next();
+            });
+            //app.UseHsts(option =>
+            //{
+            //    option.MaxAge(days: 365).IncludeSubdomains();
+            //});
+            //app.UseXContentTypeOptions();
+            //app.UseXXssProtection(option =>
+            //{
+            //    option.EnabledWithBlockMode();
+            //});
+            #endregion Security MiddleWare
+
+            app.UseStaticFiles();
+
+            #region Authentication MiddleWare
+            app.UseAuthentication();
+            #endregion Authentication MiddleWare
 
             //app.UseCookiePolicy();
 
             app.UseMvc(routes =>
             {
                 routes.MapRoute(
-
-
-
                     name: "default",
-
                     template: "{controller=Home}/{action=Home}/{id?}");
-
             });
         }
     }

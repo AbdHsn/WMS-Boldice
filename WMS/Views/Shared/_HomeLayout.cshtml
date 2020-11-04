@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿@using System.Security.Claims;
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
@@ -14,6 +15,7 @@
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic">
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Cabin:700">
         <link href="~/home.layout/assets/fonts/font-awesome.min.css" rel="stylesheet" />
+        <link href="~/css/sweetalert.css" rel="stylesheet" />
         <!-- #endregion -->
 
 
@@ -25,6 +27,7 @@
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic">
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Cabin:700">
         <link href="~/home.layout/assets/fonts/font-awesome.min.css" rel="stylesheet" />
+        <link href="~/css/sweetalert.css" rel="stylesheet" />
         <!-- #endregion -->
     </environment>
 
@@ -33,29 +36,25 @@
 <body id="page-top">
 
     <nav class="navbar navbar-light navbar-expand-md navbar navbar-expand-lg fixed-top" id="mainNav">
-        @*<div class="container">
-
-            <div class="collapse navbar-collapse" id="navbarResponsive">
-                <ul class="nav navbar-nav ml-auto">
-                    <li class="nav-item nav-link js-scroll-trigger" role="presentation"><a class="nav-link active js-scroll-trigger" href="#about">Login</a></li>
-                    <li class="nav-item nav-link js-scroll-trigger" role="presentation"><a class="nav-link js-scroll-trigger" href="#download">Registration</a></li>
-                    <li class="nav-item nav-link js-scroll-trigger" role="presentation"><a class="nav-link js-scroll-trigger" asp-controller="Home" asp-action="Dashboard">Dashboard</a></li>
-              
-            </ul>
-            </div>
-        </div>*@
-
         <div class="container">
             <a class="navbar-brand js-scroll-trigger"></a>
             <button data-toggle="collapse" class="navbar-toggler navbar-toggler-right" data-target="#navbarResponsive" type="button" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation"
-                                                                               value="Menu">
+                    value="Menu">
                 <i class="fa fa-bars"></i>
             </button>
             <div class="collapse navbar-collapse" id="navbarResponsive">
                 <ul class="nav navbar-nav ml-auto">
-                    <li class="nav-item nav-link js-scroll-trigger" role="presentation"><a class="nav-link active js-scroll-trigger" href="#about">Login</a></li>
-                    <li class="nav-item nav-link js-scroll-trigger" role="presentation"><a class="nav-link js-scroll-trigger" href="#download">Registration</a></li>
-                    <li class="nav-item nav-link js-scroll-trigger" role="presentation"><a class="nav-link js-scroll-trigger" asp-controller="Home" asp-action="Dashboard">Dashboard</a></li>
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <li class="nav-item nav-link js-scroll-trigger" role="presentation"><a class="nav-link js-scroll-trigger" asp-controller="Home" asp-action="Dashboard">Dashboard</a></li>
+                        <li class="nav-item nav-link js-scroll-trigger" role="presentation"><a class="nav-link js-scroll-trigger" asp-controller="Accounts" asp-action="Logout">Logout</a></li>
+                    }
+                    else
+                    {
+                        <li class="nav-item nav-link js-scroll-trigger" role="presentation"><a class="nav-link js-scroll-trigger" href="#" data-toggle="modal" data-target="#mdlLogin">Login</a></li>
+                        <li class="nav-item nav-link js-scroll-trigger" role="presentation"><a class="nav-link js-scroll-trigger" href="#" data-toggle="modal" data-target="#mdlRegistration">Registration</a></li>
+                    }
+
                 </ul>
             </div>
         </div>
@@ -74,67 +73,146 @@
         </div>
     </header>
     @*<section id="about" class="content-section text-center">
-        <div class="container">
-            <div class="row">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-8 mx-auto">
+                        <h2>About grayscale</h2>
+                        <p>Grayscale is a free Bootstrap theme. It can be yours right now, simply download the template on&nbsp;<a href="#">the preview page</a>. The theme is open source, and you can use it for any purpose, personal or commercial.</p>
+                        <p>This theme features stock photos by&nbsp;<a href="#">Gratisography</a>&nbsp;along with a custom Google Maps skin courtesy of&nbsp;<a href="#">Snazzy Maps</a>.</p>
+                        <p>Grayscale includes full HTML, CSS, and custom JavaScript files along with SASS and LESS files for easy customization!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section id="download" class="download-section content-section text-center" style="background-image:url('home.layout/assets/img/downloads-bg.jpg');">
+            <div class="container">
                 <div class="col-lg-8 mx-auto">
-                    <h2>About grayscale</h2>
-                    <p>Grayscale is a free Bootstrap theme. It can be yours right now, simply download the template on&nbsp;<a href="#">the preview page</a>. The theme is open source, and you can use it for any purpose, personal or commercial.</p>
-                    <p>This theme features stock photos by&nbsp;<a href="#">Gratisography</a>&nbsp;along with a custom Google Maps skin courtesy of&nbsp;<a href="#">Snazzy Maps</a>.</p>
-                    <p>Grayscale includes full HTML, CSS, and custom JavaScript files along with SASS and LESS files for easy customization!</p>
+                    <h1>Download Grayscale</h1>
+                    <p>You can download Grayscale for free on the preview page.</p><button class="btn btn-primary btn-lg btn-default" type="button">visit download page</button>
+                </div>
+            </div>
+        </section>
+        <section id="contact" class="content-section text-center">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-8 mx-auto">
+                        <h2>Contact us</h2>
+                        <p>Feel free to leave us a comment on the<a href="#">&nbsp;Grayscale template overview page</a>&nbsp;to give some feedback about this theme!</p>
+                        <ul class="list-inline banner-social-buttons">
+                            <li class="list-inline-item">&nbsp;<button class="btn btn-primary btn-lg btn-default" type="button"><i class="fa fa-google-plus fa-fw"></i><span class="network-name">&nbsp; Google+</span></button></li>
+                            <li class="list-inline-item">&nbsp;<button class="btn btn-primary btn-lg btn-default" type="button"><i class="fa fa-twitter fa-fw"></i><span class="network-name">&nbsp;Twitter</span></button></li>
+                            <li class="list-inline-item">&nbsp;<button class="btn btn-primary btn-lg btn-default" type="button"><i class="fa fa-github fa-fw"></i><span class="network-name">&nbsp;github</span></button></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>*@
+
+    <div class="modal inmodal fade" id="mdlLogin" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header justify-content-center">
+                    <h3 class="text-primary m-0">Login</h3>
+                </div>
+                <div class="modal-body">
+                    <div class="login-clean">
+                        <form method="post" id="frmLogin">
+
+                            <div class="illustration"><i class="icon ion-ios-navigate"></i></div>
+                            <div class="form-group"><input class="form-control" type="Email" name="email" placeholder="Email"></div>
+                            <div class="form-group"><input class="form-control" type="Password" name="password" placeholder="Password"></div>
+                            <div class="form-group">
+
+                            </div><a class="forgot" href="#">Forgot password?</a>
+                        </form>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary btn-block" type="button" onclick='insertRecord("Accounts", "Login", "frmLogin")'>Log In</button>
+                    <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+
                 </div>
             </div>
         </div>
-    </section>
-    <section id="download" class="download-section content-section text-center" style="background-image:url('home.layout/assets/img/downloads-bg.jpg');">
-        <div class="container">
-            <div class="col-lg-8 mx-auto">
-                <h1>Download Grayscale</h1>
-                <p>You can download Grayscale for free on the preview page.</p><button class="btn btn-primary btn-lg btn-default" type="button">visit download page</button>
-            </div>
-        </div>
-    </section>
-    <section id="contact" class="content-section text-center">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-8 mx-auto">
-                    <h2>Contact us</h2>
-                    <p>Feel free to leave us a comment on the<a href="#">&nbsp;Grayscale template overview page</a>&nbsp;to give some feedback about this theme!</p>
-                    <ul class="list-inline banner-social-buttons">
-                        <li class="list-inline-item">&nbsp;<button class="btn btn-primary btn-lg btn-default" type="button"><i class="fa fa-google-plus fa-fw"></i><span class="network-name">&nbsp; Google+</span></button></li>
-                        <li class="list-inline-item">&nbsp;<button class="btn btn-primary btn-lg btn-default" type="button"><i class="fa fa-twitter fa-fw"></i><span class="network-name">&nbsp;Twitter</span></button></li>
-                        <li class="list-inline-item">&nbsp;<button class="btn btn-primary btn-lg btn-default" type="button"><i class="fa fa-github fa-fw"></i><span class="network-name">&nbsp;github</span></button></li>
-                    </ul>
+    </div>
+
+    <div class="modal fade" id="mdlRegistration" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header justify-content-center">
+                    <h3 class="text-primary m-0">Registration</h3>
+                </div>
+                <div class="modal-body">
+                    <form method="post" id="frmRegistration">
+                        <div class="row">
+                            <div class="col-md-6 col-sm-12">
+                                <div class="form-group">
+                                    <label class="control-label text-info">First Name</label>
+                                    <input class="form-control" name="FirstName" placeholder="First Name" />
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-sm-12">
+                                <div class="form-group">
+                                    <label class="control-label text-info">Last Name</label>
+                                    <input class="form-control" name="LastName" placeholder="Last Name" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label text-info">Email Address</label>
+                            <input class="form-control" type="email" name="Email" placeholder="Email">
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label text-info">Password</label>
+                            <input class="form-control" type="password" name="Password" placeholder="Password">
+                        </div>
+                        <p class="already text-dark">
+                            You already have an account?
+                            <a href="#"> Login here</a>
+                        </p>
+
+                    </form>
+
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary btn-block" type="button" onclick='insertRecord("Accounts", "Registration", "frmRegistration")'>Sign Up</button>
+                    <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
-    </section>*@
+    </div>
 
-
-
-    
     @RenderBody()
 
-<environment include="Development">
+    <environment include="Development">
 
-    <!-- #region Templete Preferred JS -->
-    @*<script src="~/js/jquery.min.js"></script>*@
+        <!-- #region Templete Preferred JS -->
+        @*<script src="~/js/jquery.min.js"></script>*@
 
-    <script src="~/js/jquery.min.js"></script>
-    <script src="~/home.layout/assets/bootstrap/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
-    <script src="~/home.layout/assets/js/grayscale.js"></script>
-    <!-- #endregion -->
-</environment>
+        <script src="~/js/jquery.min.js"></script>
+        <script src="~/home.layout/assets/bootstrap/js/bootstrap.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+        <script src="~/home.layout/assets/js/grayscale.js"></script>
+        <script src="~/js/jquery-validate/jquery.validate.js"></script>
+        <script src="~/js/jquery-validation-unobtrusive/jquery.validate.unobtrusive.js"></script>
+        <script src="~/js/sweetalert.min.js"></script>
+        <script src="~/js/CustomJavaScript.js"></script>
+        <!-- #endregion -->
+    </environment>
 
-<environment exclude="Development">
+    <environment exclude="Development">
 
-    <!-- #region Templete Preferred JS -->
-    <script src="~/js/jquery.min.js"></script>
-    <script src="~/home.layout/assets/bootstrap/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
-    <script src="~/home.layout/assets/js/grayscale.js"></script>
-    <!-- #endregion -->
-</environment>
+        <!-- #region Templete Preferred JS -->
+        <script src="~/js/jquery.min.js"></script>
+        <script src="~/home.layout/assets/bootstrap/js/bootstrap.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+        <script src="~/home.layout/assets/js/grayscale.js"></script>
+        <script src="~/js/jquery-validate/jquery.validate.js"></script>
+        <script src="~/js/jquery-validation-unobtrusive/jquery.validate.unobtrusive.js"></script>
+        <script src="~/js/sweetalert.min.js"></script>
+        <script src="~/js/CustomJavaScript.js"></script>
+        <!-- #endregion -->
+    </environment>
 
     @RenderSection("Scripts", required: false)
 
